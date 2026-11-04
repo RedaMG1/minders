@@ -1,0 +1,937 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Minders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
+<style>
+/* Layout: a row of iPhone screens. Today is daylight, Tomorrow is night, and the sun arc shows the day's reminders. */
+:root {
+  color-scheme: dark;
+  --brand: #1f5fd0;
+  --on-sun: #ffffff;
+  --ink: #eef4ff;
+  --ink-soft: #a9bddb;
+  --line: #25467a;
+  --paper: #0b1f3f;
+  --mist: #14305c;
+  --backdrop: #132a4f;
+  --bezel: #030a18;
+  --sun: #1f5fd0;
+  --sun-soft: #173a73;
+  --accent-deep: #6bb0ff;
+  --night: #07162e;
+  --night-raised: #10284f;
+  --night-line: #24406e;
+  --night-soft: #a9bddb;
+  --moon: #9fc6ff;
+  --moon-soft: #2c2a70;
+  --star: #eef4ff;
+  --ember: #ff8a6b;
+  --ember-soft: #43243a;
+  --mint: #0f4040;
+  --sky: #123f7a;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Every color below comes from --brand. Lightness is fixed so text stays readable with any choice. */
+@supports (color: oklch(from red l c h)) {
+  :root {
+    --sun: var(--brand);
+    --on-sun: oklch(from var(--brand) calc((0.72 - l) * 100) 0 0);
+    --ink: oklch(from var(--brand) 0.96 min(c, 0.02) h);
+    --ink-soft: oklch(from var(--brand) 0.8 min(c, 0.05) h);
+    --line: oklch(from var(--brand) 0.38 min(c, 0.08) h);
+    --paper: oklch(from var(--brand) 0.23 min(c, 0.07) h);
+    --mist: oklch(from var(--brand) 0.3 min(c, 0.08) h);
+    --backdrop: oklch(from var(--brand) 0.3 min(c, 0.07) h);
+    --bezel: oklch(from var(--brand) 0.12 min(c, 0.03) h);
+    --sun-soft: oklch(from var(--brand) 0.35 min(c, 0.1) h);
+    --accent-deep: oklch(from var(--brand) 0.76 min(c, 0.15) h);
+    --night: oklch(from var(--brand) 0.17 min(c, 0.06) h);
+    --night-raised: oklch(from var(--brand) 0.25 min(c, 0.07) h);
+    --night-line: oklch(from var(--brand) 0.36 min(c, 0.08) h);
+    --night-soft: oklch(from var(--brand) 0.8 min(c, 0.05) h);
+    --moon: oklch(from var(--brand) 0.84 min(c, 0.1) h);
+    --star: oklch(from var(--brand) 0.96 min(c, 0.02) h);
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--backdrop); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.4; }
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+input, button { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Gallery */
+.gallery {
+  max-width: 1720px;
+  margin-inline: auto;
+  padding-block: 36px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 36px;
+}
+.intro { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 16px; }
+.intro h1 { font-family: var(--display); font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.intro p { flex: 1 1 280px; min-width: 0; max-width: 58ch; color: var(--ink-soft); }
+.app-icon { width: 52px; height: 52px; flex: none; }.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(393px, 100%), 393px)); justify-content: center; gap: 44px 32px; }
+.shot { display: grid; align-content: start; gap: 16px; min-width: 0; scroll-margin-top: 16px; }
+.caption { min-height: 96px; }
+.caption h2 { font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.caption p { color: var(--ink-soft); text-wrap: pretty; }
+
+/* Phone */
+.phone { position: relative; width: 100%; height: 830px; overflow: hidden; border: 9px solid var(--bezel); border-radius: 54px; background: var(--bezel); }
+.screen {
+  --fg: var(--ink);
+  --fg-soft: var(--ink-soft);
+  --rule: var(--line);
+  --field: var(--mist);
+  --tab-on: var(--sun-soft);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 45px;
+  background: var(--paper);
+  color: var(--fg);
+}
+.screen.night {
+  --fg: var(--star);
+  --fg-soft: var(--night-soft);
+  --rule: var(--night-line);
+  --field: var(--night-raised);
+  --tab-on: var(--night-line);
+  background: var(--night);
+}
+.status { flex: none; position: relative; display: flex; align-items: center; justify-content: space-between; height: 50px; padding: 8px 26px 0 34px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.status::after { content: ""; position: absolute; top: 11px; left: 50%; width: 100px; height: 28px; margin-left: -50px; border-radius: 14px; background: var(--bezel); }
+.status svg { width: 66px; height: 14px; fill: currentColor; }
+.i { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.i-sm { width: 14px; height: 14px; stroke-width: 2.4; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+.day-label { font-weight: 600; font-size: 15px; }
+.day-title { font-family: var(--display); font-size: 36px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+.page-head { flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 8px 20px 12px; }
+.icon-btn { display: grid; place-items: center; width: 44px; height: 44px; flex: none; padding: 0; border: 0; border-radius: 50%; background: var(--field); color: var(--fg); }
+.icon-btn.plain { background: none; }
+.section-label { padding: 16px 0 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-soft); }
+
+/* Bottom tabs */
+.tabs { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 10px 26px; border-top: 1px solid var(--rule); background: inherit; }
+.tab { display: grid; justify-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--fg-soft); }
+.tab span { display: grid; place-items: center; width: 56px; height: 30px; border-radius: 15px; }
+.tab.on { color: var(--fg); }
+.tab.on span { background: var(--tab-on); }
+.screen:not(.night) .tab.on { color: var(--accent-deep); }
+
+/* Quick add */
+.quick-add { flex: none; display: flex; align-items: center; gap: 8px; margin: 8px 16px 10px; padding: 5px 5px 5px 16px; border-radius: 26px; background: var(--field); }
+.quick-add input { flex: 1; min-width: 0; height: 40px; border: 0; outline: 0; background: none; font-size: 16px; }
+.quick-add input::placeholder { color: var(--fg-soft); opacity: 1; }
+.quick-add:focus-within { outline: 2px solid var(--ember); outline-offset: 1px; }
+.add-btn { display: grid; place-items: center; width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: 50%; background: var(--accent-deep); color: var(--paper); }
+.night .add-btn { background: var(--sun); color: var(--on-sun); }
+
+/* Tasks */
+.task { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 7px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.task:last-child { border-bottom: 0; }
+.task input { appearance: none; width: 26px; height: 26px; flex: none; margin: 0; border: 2px solid var(--fg); border-radius: 50%; cursor: pointer; background-position: center; background-repeat: no-repeat; background-size: 16px; }
+.task input:checked, .night .task input:checked { border-color: var(--accent-deep); background-color: var(--accent-deep); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3.2L13 5' fill='none' stroke='%23071020' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.task-body { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 10px; }
+.task-text { font-size: 16px; font-weight: 500; }
+.task input:checked + .task-body .task-text { color: var(--fg-soft); text-decoration: line-through; }
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tag.bell { background: var(--ember-soft); color: var(--ember); }
+.tag.carried { background: var(--night-raised); color: var(--moon); }
+.task.compact { min-height: 42px; }
+
+/* Today */
+.today-top { --ink: var(--on-sun); flex: none; background: var(--sun); color: var(--on-sun); padding-bottom: 34px; }
+.today-head { padding: 4px 20px 0; }
+.sun-arc { display: block; width: min(100%, 320px); margin: 2px auto -6px; font-family: var(--body); }
+.today-sheet { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-top: -24px; border-radius: 28px 28px 0 0; background: var(--paper); position: relative; }
+.today-sheet .scroll { padding: 16px 20px 4px; }
+.next-up { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--ember-soft); }
+.next-up .ring { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--ember); color: var(--paper); }
+.next-up b { display: block; font-size: 16px; font-weight: 600; }
+.next-up small { font-size: 13.5px; color: var(--ember); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Tomorrow */
+.tomorrow-head { flex: none; position: relative; padding: 4px 20px 10px; }
+.tomorrow-head .day-label { color: var(--moon); }
+.stars { position: absolute; top: -8px; right: 16px; width: 124px; height: 84px; }
+.tomorrow-body { padding: 8px 20px 4px; }
+.first-thing { --ink: var(--on-sun); display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 20px; background: var(--sun); color: var(--on-sun); }
+.first-thing .label { display: block; font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.first-thing strong { display: block; font-family: var(--display); font-size: 21px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.first-thing input { appearance: none; width: 28px; height: 28px; flex: none; margin: 0; border: 2px solid var(--ink); border-radius: 50%; }
+.first-thing input:checked { background: var(--ink); box-shadow: inset 0 0 0 5px var(--sun); }
+.morning { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 14px; font-size: 14px; color: var(--fg-soft); }
+.morning b { color: var(--fg); font-weight: 600; }
+.night .morning .i { color: var(--moon); }
+.night .task input { border-color: var(--moon); }
+
+/* Search and filters */
+.search { flex: none; display: flex; align-items: center; gap: 8px; height: 44px; margin: 0 20px; padding-inline: 14px; border-radius: 14px; background: var(--field); color: var(--fg-soft); }
+.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 16px; color: var(--fg); }
+.search input::placeholder { color: var(--fg-soft); opacity: 1; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-input { position: absolute; opacity: 0; pointer-events: none; }
+.chip { display: inline-flex; align-items: center; min-height: 36px; padding-inline: 13px; border: 1.5px solid var(--line); border-radius: 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.chip-input:checked + .chip { border-color: var(--accent-deep); background: var(--accent-deep); color: var(--paper); }
+.chip-input:focus-visible + .chip { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+/* Notes */
+.notes-filter { flex: none; padding: 10px 20px 10px; }
+.notes-grid { columns: 2; column-gap: 10px; padding: 0 20px 80px; }
+.note { display: grid; gap: 6px; break-inside: avoid; margin-bottom: 10px; padding: 13px; border: 1.5px solid var(--line); border-radius: 18px; background: var(--paper); }
+.note.sun { border-color: var(--sun-soft); background: var(--sun-soft); }
+.note.moon { border-color: var(--moon-soft); background: var(--moon-soft); }
+.note h3 { font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+.note p { font-size: 13.5px; color: var(--ink-soft); }
+.note ul { margin: 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--ink-soft); }
+.note li::before { content: "○ "; }
+.note li.done { text-decoration: line-through; }
+.note li.done::before { content: "● "; }
+.note-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+.fab-wrap { position: relative; flex: none; height: 0; }
+.fab { position: absolute; right: 18px; bottom: 14px; display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--sun); color: var(--on-sun); }
+.fab .i { width: 26px; height: 26px; stroke-width: 2.4; }
+
+/* Note editor */
+.editor-bar { flex: none; display: flex; align-items: center; gap: 2px; padding: 0 10px; }
+.editor-bar .back { display: flex; align-items: center; gap: 2px; min-height: 44px; margin-right: auto; font-size: 16px; font-weight: 600; }
+.editor { padding: 8px 22px 16px; display: grid; align-content: start; gap: 12px; }
+.saved { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.editor h2 { font-family: var(--display); font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; text-wrap: balance; }
+.editor p { font-size: 16px; line-height: 1.5; }
+.note-reminder { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 14px; background: var(--ember-soft); color: var(--ember); font-weight: 600; font-variant-numeric: tabular-nums; }
+.note-reminder span { display: flex; align-items: center; gap: 8px; }
+.toolbar { flex: none; display: flex; align-items: center; gap: 4px; padding: 8px 12px 30px; border-top: 1px solid var(--line); }
+.toolbar .send { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-left: auto; padding-inline: 14px; border: 0; border-radius: 22px; background: var(--accent-deep); color: var(--paper); font-size: 14px; font-weight: 600; white-space: nowrap; }
+
+/* Reminders */
+.reminder-list { padding: 0 20px 12px; display: grid; align-content: start; gap: 4px; }
+.group-head { display: flex; align-items: center; gap: 8px; padding: 14px 0 4px; font-family: var(--display); font-size: 19px; font-weight: 700; letter-spacing: -0.015em; }
+.sun-mark, .moon-mark { color: var(--accent-deep); }
+.reminder { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 52px; padding-block: 6px; border-bottom: 1px solid var(--line); }
+.reminder time { font-family: var(--display); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.reminder time small { display: block; font-family: var(--body); font-size: 12px; font-weight: 600; color: var(--ink-soft); letter-spacing: 0; }
+.reminder b { font-weight: 500; font-size: 16px; }
+.reminder .sub { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-soft); }
+.reminder time { color: var(--accent-deep); }
+.reminder.sent, .reminder.sent time { color: var(--ink-soft); }
+.reminder.sent b { text-decoration: line-through; }
+.reminder .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ember); }
+.reminder.sent .status-dot { background: var(--line); }
+
+/* New reminder sheet */
+.dimmed { background: var(--tint, var(--mist)); }
+.dim { position: absolute; inset: 0; background: rgba(20, 24, 28, 0.5); }
+.dimmed .today-head { position: relative; color: var(--ink); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 16px; padding: 10px 20px 34px; border-radius: 28px 28px 0 0; background: var(--paper); }
+.grabber { width: 40px; height: 5px; margin-inline: auto; border-radius: 3px; background: var(--line); }
+.sheet h2 { font-family: var(--display); font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
+.field { display: grid; gap: 6px; }
+.field > span, .field > legend { padding: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
+fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+fieldset.field > .chips, fieldset.field > .when { margin-top: 6px; }
+.text-field { width: 100%; height: 48px; padding-inline: 14px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--paper); font-size: 16px; font-weight: 500; }
+.when { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.when-opt { display: grid; gap: 1px; min-height: 58px; align-content: center; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 14px; cursor: pointer; }
+.when-opt b { font-weight: 600; }
+.when-opt small { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.chip-input:checked + .when-opt { border-color: var(--accent-deep); background: var(--sun-soft); box-shadow: inset 0 0 0 1px var(--accent-deep); }
+.chip-input:focus-visible + .when-opt { outline: 2px solid var(--ember); outline-offset: 2px; }
+.primary { min-height: 52px; border: 0; border-radius: 26px; background: var(--accent-deep); color: var(--paper); font-size: 16px; font-weight: 700; }
+
+/* Lock screen */
+.lock { background: var(--night); color: var(--star); }
+.lock .status { color: var(--star); }
+.lock-clock { padding-top: 34px; text-align: center; }
+.lock-clock p { font-size: 18px; font-weight: 600; }
+.lock-clock strong { display: block; font-family: var(--display); font-size: 92px; font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.notifications { display: grid; gap: 8px; margin-top: auto; padding: 0 12px 16px; }
+.notification { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 2px 10px; padding: 12px 14px; border-radius: 22px; background: var(--mist); color: var(--ink); }
+.notification svg { grid-row: span 2; width: 38px; height: 38px; }
+.notification b { font-weight: 700; }
+.notification time { font-size: 13px; color: var(--ink-soft); }
+.notification p { grid-column: 2 / -1; }
+.lock-actions { display: flex; justify-content: space-between; padding: 0 40px 42px; }
+.lock-actions span { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; background: var(--night-raised); color: var(--star); }
+
+/* Home and modules */
+.t-sun { --tint: #3f3413; --deep: #f0b429; }
+.t-moon { --tint: var(--moon-soft); --deep: #9a8cff; }
+.t-ember { --tint: #4d2130; --deep: #ff7a5c; }
+.t-mint { --tint: var(--mint); --deep: #34d3a0; }
+.t-sky { --tint: var(--sky); --deep: #5aa9ff; }
+.t-mist { --tint: var(--line); --deep: var(--ink-soft); }
+.home-body { padding: 0 20px 16px; display: grid; align-content: start; gap: 10px; }
+.day-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.day-card { display: grid; gap: 2px; padding: 12px 14px; border-radius: 20px; }
+.day-card.sun { background: var(--sun); color: var(--on-sun); }
+.day-card.dark { background: var(--night); color: var(--star); }
+.day-card span { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; }
+.day-card strong { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.day-card small { font-size: 13px; font-weight: 500; }
+.modules { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.module { display: grid; align-content: start; gap: 8px; padding: 12px; border-radius: 20px; background: var(--tint); color: var(--ink); }
+.module-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.tile { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 13px; background: var(--deep); color: var(--paper); }
+.kind { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+.module h4 { margin: 0; font-family: var(--display); font-size: 18px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+.module p { font-size: 13.5px; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.module .next { color: var(--ink); font-weight: 600; }
+.module.add { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border: 2px dashed var(--ink-soft); background: none; font-weight: 700; }
+.module-top { flex: none; padding-bottom: 4px; background: var(--tint); }
+.module-top .icon-btn:not(.plain) { background: var(--paper); }
+.module-top + .search { margin-top: 12px; }
+.module-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.module-title .day-title { font-size: 32px; }
+.reminder-list.in-module { padding-top: 8px; }
+.in-module .reminder { grid-template-columns: 74px minmax(0, 1fr) auto; }
+
+/* New module */
+.pick-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pick { display: grid; place-items: center; width: 44px; height: 44px; border: 1.5px solid var(--line); border-radius: 13px; cursor: pointer; }
+.chip-input:checked + .pick { border-color: var(--accent-deep); background: var(--accent-deep); color: var(--paper); }
+.swatch { width: 44px; height: 44px; border: 1.5px solid var(--line); border-radius: 50%; background: var(--tint); cursor: pointer; }
+.chip-input:checked + .swatch { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
+.chip-input:focus-visible + .pick, .chip-input:focus-visible + .swatch { outline: 2px solid var(--ember); outline-offset: 3px; }
+.when-opt .i { margin-bottom: 4px; }
+fieldset.field > .pick-row { margin-top: 6px; }
+
+/* App color */
+.head-actions { display: flex; gap: 8px; flex: none; }
+.color-body { padding: 4px 20px 16px; display: grid; align-content: start; gap: 18px; }
+.color-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+.color-dot { width: 100%; max-width: 46px; aspect-ratio: 1; border-radius: 50%; background: var(--dot); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); }
+.chip-input:checked + .color-dot { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
+.chip-input:focus-visible + .color-dot { outline: 2px solid var(--ember); outline-offset: 5px; }
+.custom-color { display: flex; align-items: center; gap: 12px; min-height: 64px; margin-top: 8px; padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 16px; cursor: pointer; }
+.custom-color input { width: 48px; height: 40px; flex: none; padding: 0; border: 0; border-radius: 10px; background: none; cursor: pointer; }
+.custom-color b { display: block; font-weight: 600; font-size: 16px; }
+.custom-color small { color: var(--ink-soft); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.color-note { color: var(--ink-soft); font-size: 14px; }
+
+@media (max-width: 440px) {
+  .gallery { padding-block: 24px 40px; }
+  .phone { border-width: 6px; border-radius: 46px; }
+  .screen { border-radius: 40px; }
+  .caption { min-height: 0; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4 7 7 0 0 0 20 14.5z"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM15 3v4h4M9 12h7M9 16h7"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 1 1 12 0v5l2 2H4zM10 21h4"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 3h6l-1 6 4 4H6l4-4zM12 13v8"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M4 11V9a3 3 0 0 1 3-3h12l-3-3M20 13v2a3 3 0 0 1-3 3H5l3 3"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M10 6h10M10 12h10M10 18h10M4 6l1 1 1.5-2M4 12l1 1 1.5-2M4 18l1 1 1.5-2"/></symbol>
+  <symbol id="i-type" viewBox="0 0 24 24"><path d="M5 7V4h14v3M12 4v16M9 20h6"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-torch" viewBox="0 0 24 24"><path d="M8 3h8v4l-2 3v11h-4V10L8 7zM12 13v2"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+  <symbol id="i-status" viewBox="0 0 66 14"><rect x="0" y="9" width="3" height="4" rx="1"/><rect x="5" y="6.5" width="3" height="6.500" rx="1"/><rect x="10" y="4" width="3" height="9" rx="1"/><rect x="15" y="1" width="3" height="12" rx="1"/><path d="M31 3c2.700 0 5 1 6.800 2.800l-1.400 1.400A7.600 7.600 0 0 0 31 5a7.600 7.600 0 0 0-5.400 2.200l-1.400-1.400A9.600 9.600 0 0 1 31 3zm0 4c1.600 0 3 .6 4 1.600L31 13l-4-4.400c1-1 2.400-1.600 4-1.600z"/><rect x="43.500" y="1.500" width="19" height="11" rx="3" fill="none" stroke="currentColor"/><rect x="45" y="3" width="13" height="8" rx="1.700"/><rect x="63.500" y="5" width="2" height="4" rx="1"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-work" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V5h6v3M3 13h18"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24"><path d="M4 17v-5l2-6h12l2 6v5zM4 12h16M6 17v2M18 17v2"/><circle cx="8" cy="14.500" r=".6"/><circle cx="16" cy="14.500" r=".6"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20S4 15 4 9a4.500 4.500 0 0 1 8-2.800A4.500 4.500 0 0 1 20 9c0 6-8 11-8 11z"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-5 4-7 8-7s7 2 8 7"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4h14v16H7a2 2 0 0 1-2-2zM5 18a2 2 0 0 1 2-2h12M9 8h6"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.500 3 3.500 15 0 18M12 3c-3.500 3-3.500 15 0 18"/></symbol>
+  <symbol id="app-icon" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="var(--sun)"/><path d="M12 44a20 20 0 0 1 40 0" fill="none" stroke="var(--on-sun)" stroke-width="5" stroke-linecap="round"/><circle cx="23" cy="26" r="7" fill="var(--on-sun)"/></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.500 0 2.200-1 2.200-2 0-1.300-1-1.700-1-2.800 0-1 .8-1.700 2-1.700H17a4 4 0 0 0 4-4c0-4.200-4-7.500-9-7.500z"/><circle cx="7.500" cy="11" r="1"/><circle cx="11" cy="7.500" r="1"/><circle cx="16" cy="8.500" r="1"/></symbol>
+</svg>
+
+<main class="gallery">
+  <header class="intro">
+    <svg class="app-icon" role="img" aria-label="Minders app icon"><use href="#app-icon"/></svg>
+    <h1>Minders</h1>
+    <p>Design preview with sample content. Each frame is an iPhone screen. You can tick tasks, pick options and type in the boxes, but nothing is saved yet.</p>  </header>
+
+  <div class="shots">
+
+    <section class="shot" id="home" aria-label="Home screen">
+      <div class="caption">
+        <h2>Home</h2>
+        <p>Your modules, one for each topic. Today and Tomorrow stay at the top, and each card shows whether it holds notes or reminders.</p>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="status" aria-hidden="true"><span>11:40</span><svg><use href="#i-status"/></svg></div>
+          <div class="page-head">
+            <div>
+              <p class="day-label">Wednesday 4 November</p>
+              <h3 class="day-title">My modules</h3>
+            </div>
+            <div class="head-actions">
+              <button class="icon-btn" type="button" aria-label="Search everything"><svg class="i"><use href="#i-search"/></svg></button>
+              <a class="icon-btn" href="#app-color" aria-label="App color"><svg class="i"><use href="#i-palette"/></svg></a>
+            </div>
+          </div>
+          <div class="scroll home-body">
+            <div class="day-cards">
+              <a class="day-card sun" href="#today">
+                <span><svg class="i i-sm"><use href="#i-sun"/></svg>Today</span>
+                <strong>3 of 6 done</strong>
+                <small>Next at 14:30</small>
+              </a>
+              <a class="day-card dark" href="#tomorrow">
+                <span><svg class="i i-sm"><use href="#i-moon"/></svg>Tomorrow</span>
+                <strong>5 tasks</strong>
+                <small>Budget draft first</small>
+              </a>
+            </div>
+            <div class="modules">
+              <a class="module t-mint" href="#car">
+                <div class="module-row"><span class="tile"><svg class="i"><use href="#i-heart"/></svg></span><span class="kind"><svg class="i i-sm"><use href="#i-bell"/></svg>Reminders</span></div>
+                <h4>Health</h4>
+                <p class="next">Today, 14:30</p>
+              </a>
+              <a class="module t-sky" href="#car">
+                <div class="module-row"><span class="tile"><svg class="i"><use href="#i-car"/></svg></span><span class="kind"><svg class="i i-sm"><use href="#i-bell"/></svg>Reminders</span></div>
+                <h4>Car</h4>
+                <p class="next">Tomorrow, 08:00</p>
+              </a>
+              <a class="module t-moon" href="#notes">
+                <div class="module-row"><span class="tile"><svg class="i"><use href="#i-user"/></svg></span><span class="kind"><svg class="i i-sm"><use href="#i-note"/></svg>Notes</span></div>
+                <h4>Personal</h4>
+                <p>6 notes</p>
+              </a>
+              <a class="module t-sun" href="#car">
+                <div class="module-row"><span class="tile"><svg class="i"><use href="#i-work"/></svg></span><span class="kind"><svg class="i i-sm"><use href="#i-bell"/></svg>Reminders</span></div>
+                <h4>Work</h4>
+                <p class="next">Mon 9 Nov, 08:00</p>
+              </a>
+              <a class="module t-ember" href="#notes">
+                <div class="module-row"><span class="tile"><svg class="i"><use href="#i-book"/></svg></span><span class="kind"><svg class="i i-sm"><use href="#i-note"/></svg>Notes</span></div>
+                <h4>Recipes</h4>
+                <p>14 notes</p>
+              </a>
+              <a class="module t-mist" href="#car">
+                <div class="module-row"><span class="tile"><svg class="i"><use href="#i-house"/></svg></span><span class="kind"><svg class="i i-sm"><use href="#i-bell"/></svg>Reminders</span></div>
+                <h4>House</h4>
+                <p class="next">Today, 18:00</p>
+              </a>
+              <a class="module add" href="#new-module"><svg class="i"><use href="#i-plus"/></svg>New module</a>
+            </div>
+          </div>
+          <nav class="tabs" aria-label="Main">
+            <a class="tab on" href="#home" aria-current="page"><span><svg class="i"><use href="#i-grid"/></svg></span>Home</a>
+            <a class="tab" href="#today"><span><svg class="i"><use href="#i-sun"/></svg></span>Today</a>
+            <a class="tab" href="#tomorrow"><span><svg class="i"><use href="#i-moon"/></svg></span>Tomorrow</a>
+            <a class="tab" href="#reminders"><span><svg class="i"><use href="#i-bell"/></svg></span>Reminders</a>
+          </nav>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="new-module" aria-label="New module screen">
+      <div class="caption">
+        <h2>New module</h2>
+        <p>Name the topic, pick an icon and a color, then choose what the module holds: notes or reminders.</p>
+      </div>
+      <div class="phone">
+        <div class="screen dimmed">
+          <div class="status" aria-hidden="true"><span>11:40</span><svg><use href="#i-status"/></svg></div>
+          <div class="today-head">
+            <p class="day-label">Wednesday 4 November</p>
+            <h3 class="day-title">My modules</h3>
+          </div>
+          <div class="dim"></div>
+          <form class="sheet" onsubmit="return false">
+            <div class="grabber"></div>
+            <h2>New module</h2>
+            <label class="field">
+              <span>Name</span>
+              <input class="text-field" id="module-name" type="text" value="Travel">
+            </label>
+            <fieldset class="field">
+              <legend>What will it hold?</legend>
+              <div class="when">
+                <input class="chip-input" type="radio" name="module-type" id="type-notes" checked><label class="when-opt" for="type-notes"><svg class="i"><use href="#i-note"/></svg><b>Notes</b><small>Text, lists and ideas</small></label>
+                <input class="chip-input" type="radio" name="module-type" id="type-reminders"><label class="when-opt" for="type-reminders"><svg class="i"><use href="#i-bell"/></svg><b>Reminders</b><small>Alerts at set times</small></label>
+              </div>
+            </fieldset>
+            <fieldset class="field">
+              <legend>Icon</legend>
+              <div class="pick-row">
+                <input class="chip-input" type="radio" name="module-icon" id="ic-globe" checked><label class="pick" for="ic-globe" aria-label="Globe"><svg class="i"><use href="#i-globe"/></svg></label>
+                <input class="chip-input" type="radio" name="module-icon" id="ic-work"><label class="pick" for="ic-work" aria-label="Briefcase"><svg class="i"><use href="#i-work"/></svg></label>
+                <input class="chip-input" type="radio" name="module-icon" id="ic-car"><label class="pick" for="ic-car" aria-label="Car"><svg class="i"><use href="#i-car"/></svg></label>
+                <input class="chip-input" type="radio" name="module-icon" id="ic-heart"><label class="pick" for="ic-heart" aria-label="Heart"><svg class="i"><use href="#i-heart"/></svg></label>
+                <input class="chip-input" type="radio" name="module-icon" id="ic-house"><label class="pick" for="ic-house" aria-label="House"><svg class="i"><use href="#i-house"/></svg></label>
+                <input class="chip-input" type="radio" name="module-icon" id="ic-book"><label class="pick" for="ic-book" aria-label="Book"><svg class="i"><use href="#i-book"/></svg></label>
+              </div>
+            </fieldset>
+            <fieldset class="field">
+              <legend>Color</legend>
+              <div class="pick-row">
+                <input class="chip-input" type="radio" name="module-color" id="co-sky" checked><label class="swatch t-sky" for="co-sky" aria-label="Blue"></label>
+                <input class="chip-input" type="radio" name="module-color" id="co-mint"><label class="swatch t-mint" for="co-mint" aria-label="Green"></label>
+                <input class="chip-input" type="radio" name="module-color" id="co-sun"><label class="swatch t-sun" for="co-sun" aria-label="Yellow"></label>
+                <input class="chip-input" type="radio" name="module-color" id="co-moon"><label class="swatch t-moon" for="co-moon" aria-label="Purple"></label>
+                <input class="chip-input" type="radio" name="module-color" id="co-ember"><label class="swatch t-ember" for="co-ember" aria-label="Pink"></label>
+                <input class="chip-input" type="radio" name="module-color" id="co-mist"><label class="swatch t-mist" for="co-mist" aria-label="Grey"></label>
+              </div>
+            </fieldset>
+            <button class="primary" type="submit">Create module</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="app-color" aria-label="App color screen">
+      <div class="caption">
+        <h2>App color</h2>
+        <p>Pick a color from the palette or choose any color you want. Try it here: every screen on this page changes with it.</p>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="status" aria-hidden="true"><span>11:40</span><svg><use href="#i-status"/></svg></div>
+          <div class="editor-bar"><a class="back" href="#home"><svg class="i"><use href="#i-back"/></svg>Home</a></div>
+          <div class="page-head"><h3 class="day-title">App color</h3></div>
+          <div class="scroll color-body">
+            <div class="day-cards" aria-hidden="true">
+              <div class="day-card sun">
+                <span><svg class="i i-sm"><use href="#i-sun"/></svg>Today</span>
+                <strong>3 of 6 done</strong>
+                <small>Next at 14:30</small>
+              </div>
+              <div class="day-card dark">
+                <span><svg class="i i-sm"><use href="#i-moon"/></svg>Tomorrow</span>
+                <strong>5 tasks</strong>
+                <small>Budget draft first</small>
+              </div>
+            </div>
+            <fieldset class="field">
+              <legend>Palette</legend>
+              <div class="color-grid">
+                <input class="chip-input" type="radio" name="app-color" id="ac-blue" value="#1f5fd0" checked><label class="color-dot" for="ac-blue" style="--dot:#1f5fd0" aria-label="Blue"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-navy" value="#12346e"><label class="color-dot" for="ac-navy" style="--dot:#12346e" aria-label="Dark blue"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-teal" value="#0f8b8d"><label class="color-dot" for="ac-teal" style="--dot:#0f8b8d" aria-label="Teal"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-green" value="#1f9d55"><label class="color-dot" for="ac-green" style="--dot:#1f9d55" aria-label="Green"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-lime" value="#9ccc3c"><label class="color-dot" for="ac-lime" style="--dot:#9ccc3c" aria-label="Lime"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-yellow" value="#ffcb2e"><label class="color-dot" for="ac-yellow" style="--dot:#ffcb2e" aria-label="Yellow"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-orange" value="#f2812b"><label class="color-dot" for="ac-orange" style="--dot:#f2812b" aria-label="Orange"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-red" value="#d92d3a"><label class="color-dot" for="ac-red" style="--dot:#d92d3a" aria-label="Red"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-pink" value="#e84a9a"><label class="color-dot" for="ac-pink" style="--dot:#e84a9a" aria-label="Pink"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-purple" value="#7a3fe0"><label class="color-dot" for="ac-purple" style="--dot:#7a3fe0" aria-label="Purple"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-slate" value="#56657a"><label class="color-dot" for="ac-slate" style="--dot:#56657a" aria-label="Slate"></label>
+                <input class="chip-input" type="radio" name="app-color" id="ac-black" value="#1a1a1a"><label class="color-dot" for="ac-black" style="--dot:#1a1a1a" aria-label="Black"></label>
+              </div>
+            </fieldset>
+            <div class="field">
+              <span>Any color</span>
+              <label class="custom-color">
+                <input id="custom-color" type="color" value="#1f5fd0" aria-label="Choose any color">
+                <span><b>Choose your own</b><small id="custom-hex">#1F5FD0</small></span>
+              </label>
+            </div>
+            <p class="color-note">Backgrounds and text adjust to your color, so everything stays easy to read.</p>
+          </div>
+          <nav class="tabs" aria-label="Main">
+            <a class="tab on" href="#home"><span><svg class="i"><use href="#i-grid"/></svg></span>Home</a>
+            <a class="tab" href="#today"><span><svg class="i"><use href="#i-sun"/></svg></span>Today</a>
+            <a class="tab" href="#tomorrow"><span><svg class="i"><use href="#i-moon"/></svg></span>Tomorrow</a>
+            <a class="tab" href="#reminders"><span><svg class="i"><use href="#i-bell"/></svg></span>Reminders</a>
+          </nav>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="today" aria-label="Today screen">
+      <div class="caption">
+        <h2>Today</h2>
+        <p>The sun moves along the arc through your day. The dots are your reminders.</p>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="today-top">
+            <div class="status" aria-hidden="true"><span>11:40</span><svg><use href="#i-status"/></svg></div>
+            <div class="today-head">
+              <p class="day-label">Wednesday</p>
+              <h3 class="day-title">4 November</h3>
+            </div>
+            <svg class="sun-arc" viewBox="0 0 340 150" role="img" aria-label="Day arc from 06:00 to midnight. It is 11:40, one reminder has passed and three are still to come.">
+              <path d="M50 130A120 120 0 0 1 104.100 29.700" fill="none" stroke="var(--ink)" stroke-width="3.500" stroke-linecap="round"/>
+              <path d="M104.100 29.700A120 120 0 0 1 290 130" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 8"/>
+              <circle cx="66.100" cy="70" r="5.500" fill="var(--ink)"/>
+              <circle cx="159.500" cy="10.500" r="6" fill="var(--ember)" stroke="var(--ink)" stroke-width="2"/>
+              <circle cx="230" cy="26.100" r="6" fill="var(--ember)" stroke="var(--ink)" stroke-width="2"/>
+              <circle cx="273.900" cy="70" r="6" fill="var(--ember)" stroke="var(--ink)" stroke-width="2"/>
+              <circle cx="104.100" cy="29.700" r="13" fill="var(--ink)" stroke="var(--ink)" stroke-width="3"/>
+              <g font-size="12" font-weight="600" fill="var(--ink)" text-anchor="middle">
+                <text x="88" y="78">09:00</text>
+                <text x="161" y="34">14:30</text>
+                <text x="216" y="46">18:00</text>
+                <text x="252" y="78">21:00</text>
+                <text x="50" y="146">06:00</text>
+                <text x="290" y="146">24:00</text>
+              </g>
+              <text x="170" y="104" text-anchor="middle" font-size="36" font-weight="800" fill="var(--ink)" style="font-family:var(--display);letter-spacing:-0.03em">3 of 6</text>
+              <text x="170" y="124" text-anchor="middle" font-size="14" font-weight="600" fill="var(--ink)">done today</text>
+            </svg>
+          </div>
+          <div class="today-sheet">
+            <div class="scroll">
+              <div class="next-up">
+                <span class="ring"><svg class="i"><use href="#i-bell"/></svg></span>
+                <div><b>Call the dentist</b><small>14:30, in 2 h 50 min</small></div>
+              </div>
+              <p class="section-label">To do</p>
+              <label class="task"><input type="checkbox" id="t1"><span class="task-body"><span class="task-text">Call the dentist</span><span class="tag bell"><svg class="i i-sm"><use href="#i-bell"/></svg>14:30</span></span></label>
+              <label class="task"><input type="checkbox" id="t2"><span class="task-body"><span class="task-text">Send the monthly report</span></span></label>
+              <label class="task"><input type="checkbox" id="t3"><span class="task-body"><span class="task-text">Buy groceries</span><span class="tag bell"><svg class="i i-sm"><use href="#i-bell"/></svg>18:00</span></span></label>
+              <p class="section-label">Done</p>
+              <label class="task compact"><input type="checkbox" id="t4" checked><span class="task-body"><span class="task-text">Morning walk</span></span></label>
+              <label class="task compact"><input type="checkbox" id="t5" checked><span class="task-body"><span class="task-text">Pay the electricity bill</span></span></label>
+              <label class="task compact"><input type="checkbox" id="t6" checked><span class="task-body"><span class="task-text">Reply to Sara</span></span></label>
+            </div>
+            <form class="quick-add" onsubmit="return false">
+              <input id="add-today" type="text" placeholder="Add something for today" aria-label="Add something for today">
+              <button class="add-btn" type="button" aria-label="Add"><svg class="i"><use href="#i-plus"/></svg></button>
+            </form>
+            <nav class="tabs" aria-label="Main">
+              <a class="tab" href="#home"><span><svg class="i"><use href="#i-grid"/></svg></span>Home</a>
+              <a class="tab on" href="#today" aria-current="page"><span><svg class="i"><use href="#i-sun"/></svg></span>Today</a>
+              <a class="tab" href="#tomorrow"><span><svg class="i"><use href="#i-moon"/></svg></span>Tomorrow</a>              <a class="tab" href="#reminders"><span><svg class="i"><use href="#i-bell"/></svg></span>Reminders</a>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="tomorrow" aria-label="Tomorrow screen">
+      <div class="caption">
+        <h2>Tomorrow</h2>
+        <p>Plan in the evening: pick the one thing that matters most, then add the rest. Unfinished tasks can move here.</p>
+      </div>
+      <div class="phone">
+        <div class="screen night">
+          <div class="status" aria-hidden="true"><span>21:04</span><svg><use href="#i-status"/></svg></div>
+          <div class="tomorrow-head">
+            <svg class="stars" viewBox="0 0 124 84" aria-hidden="true">
+              <path d="M88 8a26 26 0 1 0 26 34A21 21 0 0 1 88 8z" fill="var(--moon)"/>
+              <g fill="var(--star)"><circle cx="20" cy="22" r="2"/><circle cx="44" cy="8" r="1.500"/><circle cx="50" cy="44" r="1.500"/><circle cx="8" cy="52" r="1.500"/><circle cx="118" cy="14" r="1.500"/></g>
+            </svg>
+            <p class="day-label">Thursday</p>
+            <h3 class="day-title">5 November</h3>
+          </div>
+          <div class="scroll tomorrow-body">
+            <label class="first-thing">
+              <input type="checkbox" id="first" aria-label="Mark first thing as done">
+              <span><span class="label">First thing</span><strong>Finish the budget draft</strong></span>
+            </label>
+            <div class="morning">
+              <svg class="i"><use href="#i-bell"/></svg>
+              <span>You get this list at <b>07:30</b> tomorrow morning.</span>
+            </div>
+            <p class="section-label">Also tomorrow</p>
+            <label class="task"><input type="checkbox" id="n1"><span class="task-body"><span class="task-text">Send the monthly report</span><span class="tag carried">From today</span></span></label>
+            <label class="task"><input type="checkbox" id="n2"><span class="task-body"><span class="task-text">Pick up the package</span><span class="tag carried"><svg class="i i-sm"><use href="#i-bell"/></svg>16:00</span></span></label>
+            <label class="task"><input type="checkbox" id="n3"><span class="task-body"><span class="task-text">Book a table for Saturday</span></span></label>
+            <label class="task"><input type="checkbox" id="n4"><span class="task-body"><span class="task-text">Go to the gym</span></span></label>
+          </div>
+          <form class="quick-add" onsubmit="return false">
+            <input id="add-tomorrow" type="text" placeholder="What do you want to do tomorrow?" aria-label="What do you want to do tomorrow?">
+            <button class="add-btn" type="button" aria-label="Add"><svg class="i"><use href="#i-plus"/></svg></button>
+          </form>
+          <nav class="tabs" aria-label="Main">
+            <a class="tab" href="#home"><span><svg class="i"><use href="#i-grid"/></svg></span>Home</a>
+            <a class="tab" href="#today"><span><svg class="i"><use href="#i-sun"/></svg></span>Today</a>
+            <a class="tab on" href="#tomorrow" aria-current="page"><span><svg class="i"><use href="#i-moon"/></svg></span>Tomorrow</a>            <a class="tab" href="#reminders"><span><svg class="i"><use href="#i-bell"/></svg></span>Reminders</a>
+          </nav>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="notes" aria-label="Notes screen">
+      <div class="caption">
+        <h2>A notes module</h2>
+        <p>Only notes, with no alerts. You can search and filter them, and pinned notes stay on top.</p>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="module-top t-moon">
+            <div class="status" aria-hidden="true"><span>11:40</span><svg><use href="#i-status"/></svg></div>
+            <div class="editor-bar"><a class="back" href="#home"><svg class="i"><use href="#i-back"/></svg>Home</a></div>
+            <div class="page-head">
+              <div class="module-title">
+                <span class="tile"><svg class="i"><use href="#i-user"/></svg></span>
+                <div><h3 class="day-title">Personal</h3><span class="kind"><svg class="i i-sm"><use href="#i-note"/></svg>Notes</span></div>
+              </div>
+            </div>
+          </div>
+          <label class="search"><svg class="i"><use href="#i-search"/></svg><input id="search-notes" type="search" placeholder="Search notes" aria-label="Search notes"></label>
+          <div class="chips notes-filter" role="group" aria-label="Filter notes">
+            <input class="chip-input" type="radio" name="filter" id="f-all" checked><label class="chip" for="f-all">All</label>
+            <input class="chip-input" type="radio" name="filter" id="f-pin"><label class="chip" for="f-pin">Pinned</label>
+            <input class="chip-input" type="radio" name="filter" id="f-list"><label class="chip" for="f-list">Lists</label>
+            <input class="chip-input" type="radio" name="filter" id="f-week"><label class="chip" for="f-week">This week</label>
+          </div>
+          <div class="scroll">
+            <div class="notes-grid">
+              <a class="note sun" href="#note">
+                <h3>Weekend trip ideas</h3>
+                <ul><li class="done">Book the hotel</li><li>Check the car</li><li>Pack the camera</li></ul>
+                <div class="note-foot"><span>Pinned</span></div>
+              </a>
+              <a class="note" href="#note">
+                <h3>Meeting, 3 Nov</h3>
+                <p>Move the deadline to the 20th. Ask for the new price list before Friday.</p>
+                <div class="note-foot"><span>Yesterday</span></div>
+              </a>
+              <a class="note moon" href="#note">
+                <h3>Books to read</h3>
+                <ul><li>Atomic Habits</li><li>Deep Work</li></ul>
+                <div class="note-foot"><span>1 Nov</span></div>
+              </a>
+              <a class="note" href="#note">
+                <h3>App ideas</h3>
+                <p>A small tool to split bills with friends. Keep it to one screen.</p>
+                <div class="note-foot"><span>28 Oct</span></div>
+              </a>
+              <a class="note" href="#note">
+                <h3>Soup recipe</h3>
+                <p>Lentils, tomato, celery, coriander. Simmer for 40 minutes.</p>
+                <div class="note-foot"><span>22 Oct</span></div>
+              </a>
+              <a class="note sun" href="#note">
+                <h3>Gift ideas</h3>
+                <p>Headphones, a good notebook, or a weekend away.</p>
+                <div class="note-foot"><span>Pinned</span></div>
+              </a>
+            </div>
+          </div>
+          <div class="fab-wrap"><button class="fab" type="button" aria-label="New note"><svg class="i"><use href="#i-plus"/></svg></button></div>
+          <nav class="tabs" aria-label="Main">
+            <a class="tab on" href="#home"><span><svg class="i"><use href="#i-grid"/></svg></span>Home</a>
+            <a class="tab" href="#today"><span><svg class="i"><use href="#i-sun"/></svg></span>Today</a>
+            <a class="tab" href="#tomorrow"><span><svg class="i"><use href="#i-moon"/></svg></span>Tomorrow</a>
+            <a class="tab" href="#reminders"><span><svg class="i"><use href="#i-bell"/></svg></span>Reminders</a>
+          </nav>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="note" aria-label="Note editor screen">
+      <div class="caption">
+        <h2>Writing a note</h2>
+        <p>Write text or a checklist, or send the note to tomorrow's list with one tap.</p>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="status" aria-hidden="true"><span>11:40</span><svg><use href="#i-status"/></svg></div>
+          <div class="editor-bar">
+            <a class="back" href="#notes"><svg class="i"><use href="#i-back"/></svg>Personal</a>
+            <button class="icon-btn plain" type="button" aria-label="Unpin note"><svg class="i"><use href="#i-pin"/></svg></button>
+          </div>
+          <div class="scroll editor">
+            <p class="saved">Saved, today at 11:38</p>
+            <h2>Weekend trip ideas</h2>
+            <p>Leave early on Saturday to avoid the traffic. Ask if anyone wants to come along.</p>
+            <div>
+              <label class="task"><input type="checkbox" id="c1" checked><span class="task-body"><span class="task-text">Book the hotel</span></span></label>
+              <label class="task"><input type="checkbox" id="c2"><span class="task-body"><span class="task-text">Check the car</span></span></label>
+              <label class="task"><input type="checkbox" id="c3"><span class="task-body"><span class="task-text">Pack the camera</span></span></label>
+              <label class="task"><input type="checkbox" id="c4"><span class="task-body"><span class="task-text">Download offline maps</span></span></label>
+            </div>
+            <p>Places to see: the old town, the viewpoint, and the market on Sunday morning.</p>
+          </div>
+          <div class="toolbar">
+            <button class="icon-btn plain" type="button" aria-label="Format text"><svg class="i"><use href="#i-type"/></svg></button>
+            <button class="icon-btn plain" type="button" aria-label="Add checklist"><svg class="i"><use href="#i-list"/></svg></button>
+            <button class="send" type="button"><svg class="i i-sm"><use href="#i-moon"/></svg>Add to tomorrow</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="car" aria-label="Reminders module screen">
+      <div class="caption">
+        <h2>A reminders module</h2>
+        <p>Only reminders, in time order. Each one sends a notification, and repeating ones show how often they come back.</p>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="module-top t-sky">
+            <div class="status" aria-hidden="true"><span>11:40</span><svg><use href="#i-status"/></svg></div>
+            <div class="editor-bar"><a class="back" href="#home"><svg class="i"><use href="#i-back"/></svg>Home</a></div>
+            <div class="page-head">
+              <div class="module-title">
+                <span class="tile"><svg class="i"><use href="#i-car"/></svg></span>
+                <div><h3 class="day-title">Car</h3><span class="kind"><svg class="i i-sm"><use href="#i-bell"/></svg>Reminders</span></div>
+              </div>
+              <a class="icon-btn" href="#new-reminder" aria-label="New reminder"><svg class="i"><use href="#i-plus"/></svg></a>
+            </div>
+          </div>
+          <div class="scroll reminder-list in-module">
+            <div class="reminder"><time>08:00<small>Thu 5 Nov</small></time><div><b>Renew the car insurance</b></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <div class="reminder"><time>10:00<small>Sat 7 Nov</small></time><div><b>Car wash</b><div class="sub"><svg class="i i-sm"><use href="#i-repeat"/></svg>Every Saturday</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <div class="reminder"><time>09:00<small>Mon 16 Nov</small></time><div><b>Oil change</b></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <div class="reminder"><time>09:00<small>Tue 12 Jan</small></time><div><b>Technical inspection</b><div class="sub"><svg class="i i-sm"><use href="#i-repeat"/></svg>Every year</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+          </div>
+          <nav class="tabs" aria-label="Main">
+            <a class="tab on" href="#home"><span><svg class="i"><use href="#i-grid"/></svg></span>Home</a>
+            <a class="tab" href="#today"><span><svg class="i"><use href="#i-sun"/></svg></span>Today</a>
+            <a class="tab" href="#tomorrow"><span><svg class="i"><use href="#i-moon"/></svg></span>Tomorrow</a>
+            <a class="tab" href="#reminders"><span><svg class="i"><use href="#i-bell"/></svg></span>Reminders</a>
+          </nav>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="reminders" aria-label="All reminders screen">
+      <div class="caption">
+        <h2>All reminders</h2>
+        <p>Everything coming up from all your modules, in one list. Each row shows which module it came from.</p>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="status" aria-hidden="true"><span>11:40</span><svg><use href="#i-status"/></svg></div>
+          <div class="page-head"><h3 class="day-title">All reminders</h3></div>
+          <div class="scroll reminder-list">
+            <h4 class="group-head" style="margin:0"><svg class="i sun-mark"><use href="#i-sun"/></svg>Today</h4>
+            <div class="reminder sent"><time>09:00</time><div><b>Take vitamins</b><div class="sub"><svg class="i i-sm"><use href="#i-repeat"/></svg>Health, every day</div></div><span class="status-dot" aria-label="Sent"></span></div>
+            <div class="reminder"><time>14:30</time><div><b>Call the dentist</b><div class="sub">Health</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <div class="reminder"><time>18:00</time><div><b>Buy groceries</b><div class="sub">House</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <div class="reminder"><time>21:00</time><div><b>Plan tomorrow</b><div class="sub"><svg class="i i-sm"><use href="#i-repeat"/></svg>Every day</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <h4 class="group-head" style="margin:0"><svg class="i moon-mark"><use href="#i-moon"/></svg>Tomorrow</h4>
+            <div class="reminder"><time>07:30</time><div><b>Morning list</b><div class="sub"><svg class="i i-sm"><use href="#i-repeat"/></svg>Every day</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <div class="reminder"><time>08:00</time><div><b>Renew the car insurance</b><div class="sub">Car</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <div class="reminder"><time>16:00</time><div><b>Pick up the package</b><div class="sub">House</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <h4 class="group-head" style="margin:0"><svg class="i"><use href="#i-arrow"/></svg>Later</h4>
+            <div class="reminder"><time>10:00<small>Sat 7</small></time><div><b>Car wash</b><div class="sub"><svg class="i i-sm"><use href="#i-repeat"/></svg>Car, every Saturday</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+            <div class="reminder"><time>08:00<small>Mon 9</small></time><div><b>Weekly review</b><div class="sub"><svg class="i i-sm"><use href="#i-repeat"/></svg>Work, every Monday</div></div><span class="status-dot" aria-label="Upcoming"></span></div>
+          </div>
+          <nav class="tabs" aria-label="Main">
+            <a class="tab" href="#home"><span><svg class="i"><use href="#i-grid"/></svg></span>Home</a>
+            <a class="tab" href="#today"><span><svg class="i"><use href="#i-sun"/></svg></span>Today</a>
+            <a class="tab" href="#tomorrow"><span><svg class="i"><use href="#i-moon"/></svg></span>Tomorrow</a>            <a class="tab on" href="#reminders" aria-current="page"><span><svg class="i"><use href="#i-bell"/></svg></span>Reminders</a>
+          </nav>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="new-reminder" aria-label="New reminder screen">
+      <div class="caption">
+        <h2>New reminder</h2>
+        <p>Common times are one tap away, so setting a reminder takes a few seconds.</p>
+      </div>
+      <div class="phone">
+        <div class="screen dimmed t-sky">
+          <div class="status" aria-hidden="true"><span>11:40</span><svg><use href="#i-status"/></svg></div>
+          <div class="today-head">
+            <p class="day-label">Reminders</p>
+            <h3 class="day-title">Car</h3>
+          </div>
+          <div class="dim"></div>
+          <form class="sheet" onsubmit="return false">
+            <div class="grabber"></div>
+            <h2>New reminder in Car</h2>
+            <label class="field">
+              <span>Remind me to</span>
+              <input class="text-field" id="reminder-title" type="text" value="Check the tyres">
+            </label>
+            <fieldset class="field">
+              <legend>When</legend>
+              <div class="when">
+                <input class="chip-input" type="radio" name="when" id="w1"><label class="when-opt" for="w1"><b>In 1 hour</b><small>12:40</small></label>
+                <input class="chip-input" type="radio" name="when" id="w2"><label class="when-opt" for="w2"><b>This evening</b><small>Today, 20:00</small></label>
+                <input class="chip-input" type="radio" name="when" id="w3" checked><label class="when-opt" for="w3"><b>Tomorrow morning</b><small>Thu 5 Nov, 08:00</small></label>
+                <input class="chip-input" type="radio" name="when" id="w4"><label class="when-opt" for="w4"><b>Pick a time</b><small>Date and time</small></label>
+              </div>
+            </fieldset>
+            <fieldset class="field">
+              <legend>Repeat</legend>
+              <div class="chips">
+                <input class="chip-input" type="radio" name="repeat" id="r1" checked><label class="chip" for="r1">Never</label>
+                <input class="chip-input" type="radio" name="repeat" id="r2"><label class="chip" for="r2">Daily</label>
+                <input class="chip-input" type="radio" name="repeat" id="r3"><label class="chip" for="r3">Weekly</label>
+                <input class="chip-input" type="radio" name="repeat" id="r4"><label class="chip" for="r4">Monthly</label>
+              </div>
+            </fieldset>
+            <button class="primary" type="submit">Set reminder</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="shot" id="lock-screen" aria-label="Notification on the lock screen">
+      <div class="caption">
+        <h2>On your lock screen</h2>
+        <p>Reminders arrive like any app's notification. On iPhone, this works after you add Minders to your Home Screen.</p>
+      </div>
+      <div class="phone">
+        <div class="screen lock">
+          <div class="status" aria-hidden="true"><span></span><svg><use href="#i-status"/></svg></div>
+          <div class="lock-clock">
+            <p>Wednesday 4 November</p>
+            <strong>14:30</strong>
+          </div>
+          <div class="notifications">
+            <div class="notification">
+              <svg role="img" aria-label="Minders"><use href="#app-icon"/></svg>
+              <b>Call the dentist</b><time>now</time>
+              <p>Reminder from Health.</p>
+            </div>
+            <div class="notification">
+              <svg role="img" aria-label="Minders"><use href="#app-icon"/></svg>
+              <b>Your morning list</b><time>07:30</time>
+              <p>First thing: Morning walk. 5 more tasks today.</p>
+            </div>
+          </div>
+          <div class="lock-actions" aria-hidden="true">
+            <span><svg class="i"><use href="#i-torch"/></svg></span>
+            <span><svg class="i"><use href="#i-camera"/></svg></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+  const root = document.documentElement;
+  const custom = document.getElementById("custom-color");
+  const hex = document.getElementById("custom-hex");
+  const swatches = [...document.querySelectorAll('input[name="app-color"]')];
+
+  function applyColor(color) {
+    root.style.setProperty("--brand", color);
+    custom.value = color;
+    hex.textContent = color.toUpperCase();
+    swatches.forEach((swatch) => { swatch.checked = swatch.value === color; });
+    try { localStorage.setItem("minders-color", color); } catch {}
+  }
+
+  swatches.forEach((swatch) => swatch.addEventListener("change", () => applyColor(swatch.value)));
+  custom.addEventListener("input", () => applyColor(custom.value));
+
+  try {
+    const saved = localStorage.getItem("minders-color");
+    if (saved) applyColor(saved);
+  } catch {}
+</script>
