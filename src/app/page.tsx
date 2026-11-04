@@ -12,9 +12,15 @@ import {
   tasksForTomorrow,
   upcomingReminders,
   useApp,
+  useSyncStatus,
 } from "@/lib/store";
 
 const COMING_UP_COUNT = 3;
+const SYNC_MESSAGES = {
+  saving: "Saving online…",
+  saved: "All changes saved online",
+  offline: "Saved on this device. It will upload when you're back online.",
+};
 
 function isIphoneBrowser() {
   const installed = window.matchMedia("(display-mode: standalone)").matches;
@@ -23,6 +29,7 @@ function isIphoneBrowser() {
 
 export default function HomePage() {
   const app = useApp();
+  const syncStatus = useSyncStatus();
   const [creating, setCreating] = useState(false);
   if (!app) return <div className="screen" />;
 
@@ -98,7 +105,7 @@ export default function HomePage() {
         )}
 
         <div className="modules">
-          {state.modules.map((module) => {
+          {[...state.modules].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map((module) => {
             const noteCount = state.notes.filter((note) => note.moduleId === module.id).length;
             const next = upcoming.find((reminder) => reminder.moduleId === module.id);
             return (
@@ -144,6 +151,12 @@ export default function HomePage() {
               </Link>
             ))}
           </div>
+        )}
+
+        {syncStatus !== "off" && (
+          <p className="sync-status" role="status">
+            {SYNC_MESSAGES[syncStatus]}
+          </p>
         )}
       </div>
 

@@ -441,6 +441,7 @@ fieldset.field > .chips, fieldset.field > .when, fieldset.field > .pick-row { ma
 .head-actions { display: flex; gap: 8px; flex: none; }
 .head-actions .icon-btn { width: 40px; height: 40px; }
 .theme-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding-inline: 12px 14px; border-radius: 20px; background: var(--field); font-size: 14px; font-weight: 600; }
+.sync-status { padding-top: 6px; color: var(--ink-soft); font-size: 13px; text-align: center; }
 .coming { display: grid; margin-top: 6px; }
 .coming .section-label { padding-top: 0; }
 .coming-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding-block: 6px; border-bottom: 1px solid var(--line); }

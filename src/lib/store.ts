@@ -1,10 +1,11 @@
 import { useSyncExternalStore } from "react";
 import { addDays, dayKey, nextOccurrence, whenLabel } from "./dates";
 import { DEFAULT_BRAND, DEFAULT_THEME } from "./options";
+import { COLLECTIONS, getSyncStatus, startSync, stopSync, trackChanges, type ItemRow } from "./sync";
 import type { AppState, Module, Note, Reminder, Task, ThemeName, Toast } from "./types";
 
-// Everything is saved on this device for now. This file is the only place that
-// knows that, so syncing through a database later only needs changes here.
+// Screens read and change the copy saved on this device, so they work with no internet.
+// sync.ts keeps that copy in step with the database.
 const DATA_KEY = "minders-data";
 const COLOR_KEY = "minders-color";
 const THEME_KEY = "minders-theme";
@@ -54,15 +55,46 @@ function getNow() {
 
 const notify = () => listeners.forEach((listener) => listener());
 
-function commit(change: (current: AppState) => AppState) {
-  state = change(getState());
+function save(next: AppState) {
+  state = next;
   try {
-    localStorage.setItem(DATA_KEY, JSON.stringify(state));
-    localStorage.setItem(COLOR_KEY, state.brand);
-    localStorage.setItem(THEME_KEY, state.theme);
+    localStorage.setItem(DATA_KEY, JSON.stringify(next));
+    localStorage.setItem(COLOR_KEY, next.brand);
+    localStorage.setItem(THEME_KEY, next.theme);
   } catch {
     pushToast({ title: "Could not save", detail: "This device's storage is full or blocked.", kind: "info" });
   }
+}
+
+function commit(change: (current: AppState) => AppState) {
+  const previous = getState();
+  const next = change(previous);
+  save(next);
+  trackChanges(previous, next);
+  notify();
+}
+
+/** Brings in what other devices changed, without queueing it to upload again. */
+function applyRemote(rows: ItemRow[], isNewer: (row: ItemRow) => boolean) {
+  const current = getState();
+  let next = current;
+  for (const [kind, key] of COLLECTIONS) {
+    const incoming = rows.filter((row) => row.kind === kind && isNewer(row));
+    if (!incoming.length) continue;
+    const records = new Map<string, unknown>(current[key].map((record) => [record.id, record]));
+    let changed = false;
+    for (const row of incoming) {
+      if (row.deleted) {
+        changed = records.delete(row.id) || changed;
+      } else if (JSON.stringify(records.get(row.id)) !== JSON.stringify(row.data)) {
+        records.set(row.id, row.data);
+        changed = true;
+      }
+    }
+    if (changed) next = { ...next, [key]: [...records.values()] };
+  }
+  if (next === current) return;
+  save(next);
   notify();
 }
 
@@ -126,6 +158,8 @@ function subscribe(listener: () => void) {
     window.addEventListener("storage", onStorage);
     document.addEventListener("visibilitychange", tick);
     timer = setInterval(tick, CLOCK_SECONDS * 1000);
+    // Sync loads its saved queue first, because a reminder going off in tick() adds to that queue.
+    startSync({ getState, applyRemote, onStatusChange: notify });
     tick();
   }
   return () => {
@@ -134,8 +168,13 @@ function subscribe(listener: () => void) {
       window.removeEventListener("storage", onStorage);
       document.removeEventListener("visibilitychange", tick);
       clearInterval(timer);
+      stopSync();
     }
   };
+}
+
+export function useSyncStatus() {
+  return useSyncExternalStore(subscribe, getSyncStatus, () => "off" as const);
 }
 
 /** The saved data and the current minute. It is null while the page is prerendered. */
