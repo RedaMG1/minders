@@ -83,6 +83,8 @@ export type AppState = {
   theme: ThemeName;
   brand: string;
   installDismissed: boolean;
+  /** When a backup was last downloaded on this device. */
+  lastBackupAt?: string;
 };
 
 export type Toast = {

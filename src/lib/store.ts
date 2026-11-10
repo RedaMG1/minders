@@ -347,6 +347,10 @@ export function setBrand(brand: string) {
   commit((data) => ({ ...data, brand }));
 }
 
+export function markBackedUp(at: string) {
+  commit((data) => ({ ...data, lastBackupAt: at }));
+}
+
 export function dismissInstallTip() {
   commit((data) => ({ ...data, installDismissed: true }));
 }

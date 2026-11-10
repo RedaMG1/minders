@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { BackupButton } from "@/components/BackupButton";
 import { Icon, ModuleIcon } from "@/components/Icon";
 import { ModuleSheet } from "@/components/ModuleSheet";
 import { TabBar } from "@/components/TabBar";
@@ -152,6 +153,8 @@ export default function HomePage() {
             ))}
           </div>
         )}
+
+        <BackupButton state={state} now={now} />
 
         {syncStatus !== "off" && (
           <p className="sync-status" role="status">

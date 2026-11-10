@@ -450,6 +450,12 @@ fieldset.field > .chips, fieldset.field > .when, fieldset.field > .pick-row { ma
 .head-actions { display: flex; gap: 8px; flex: none; }
 .head-actions .icon-btn { width: 40px; height: 40px; }
 .theme-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding-inline: 12px 14px; border-radius: 20px; background: var(--field); font-size: 14px; font-weight: 600; }
+.backup { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 12px 12px 12px 14px; border: 1px solid var(--line); border-radius: 16px; }
+.backup > div { display: grid; min-width: 0; }
+.backup b { font-size: 15px; font-weight: 600; }
+.backup small { color: var(--ink-soft); font-size: 13px; }
+.backup .theme-btn { flex: none; border: 0; }
+.backup .theme-btn:disabled { opacity: 0.45; cursor: default; }
 .sync-status { padding-top: 6px; color: var(--ink-soft); font-size: 13px; text-align: center; }
 .coming { display: grid; margin-top: 6px; }
 .coming .section-label { padding-top: 0; }
