@@ -53,11 +53,33 @@ export type Task = {
   createdAt: string;
 };
 
+export type BudgetCategory = {
+  id: string;
+  name: string;
+  color: string;
+  /** The most you plan to spend in this category each month, in cents. */
+  monthlyLimit?: number;
+  createdAt: string;
+};
+
+export type BudgetItem = {
+  id: string;
+  categoryId: string;
+  label: string;
+  /** Stored in cents, so adding up never gives rounding errors. */
+  amount: number;
+  /** Local date, as YYYY-MM-DD. */
+  date: string;
+  createdAt: string;
+};
+
 export type AppState = {
   modules: Module[];
   notes: Note[];
   reminders: Reminder[];
   tasks: Task[];
+  budgetCategories: BudgetCategory[];
+  budgetItems: BudgetItem[];
   theme: ThemeName;
   brand: string;
   installDismissed: boolean;

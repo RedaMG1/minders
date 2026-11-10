@@ -9,12 +9,15 @@ const TABS: { href: string; label: string; icon: IconName }[] = [
   { href: "/today", label: "Today", icon: "sun" },
   { href: "/tomorrow", label: "Tomorrow", icon: "moon" },
   { href: "/reminders", label: "Reminders", icon: "bell" },
+  { href: "/budget", label: "Budget", icon: "wallet" },
 ];
+
+/** Pages without their own tab show the tab they belong to. Anything else, such as a module, sits under Home. */
+const PARENT_TABS: Record<string, string> = { "/history": "/today", "/budget/category": "/budget" };
 
 export function TabBar() {
   const path = usePathname().replace(/\/$/, "") || "/";
-  // History belongs to Today. Other pages without their own tab, such as a module, sit under Home.
-  const active = TABS.some((tab) => tab.href === path) ? path : path === "/history" ? "/today" : "/";
+  const active = TABS.some((tab) => tab.href === path) ? path : (PARENT_TABS[path] ?? "/");
 
   return (
     <nav className="tabs" aria-label="Main">

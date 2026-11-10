@@ -1,7 +1,7 @@
 // Keeps the app working offline. Bump VERSION to drop the old caches after a change here.
-const VERSION = "v3";
+const VERSION = "v4";
 const CACHE = `minders-${VERSION}`;
-const PAGES = ["/", "/today", "/tomorrow", "/reminders", "/theme", "/history", "/module", "/note", "/search"];
+const PAGES = ["/", "/today", "/tomorrow", "/reminders", "/theme", "/history", "/budget", "/budget/category", "/module", "/note", "/search"];
 const FILES = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {

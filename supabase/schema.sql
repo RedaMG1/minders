@@ -1,7 +1,7 @@
 -- Run this once in the SQL Editor of a new Supabase project.
 create table public.items (
   id text primary key,
-  kind text not null check (kind in ('module', 'note', 'reminder', 'task')),
+  kind text not null check (kind in ('module', 'note', 'reminder', 'task', 'budget_category', 'budget_item')),
   data jsonb not null default '{}'::jsonb,
   deleted boolean not null default false,
   changed_at timestamptz not null,

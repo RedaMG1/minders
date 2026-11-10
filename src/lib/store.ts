@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { addDays, dayKey, nextOccurrence, whenLabel } from "./dates";
 import { DEFAULT_BRAND, DEFAULT_THEME } from "./options";
 import { COLLECTIONS, getSyncStatus, startSync, stopSync, trackChanges, type ItemRow } from "./sync";
-import type { AppState, Module, Note, Reminder, Task, ThemeName, Toast } from "./types";
+import type { AppState, BudgetCategory, BudgetItem, Module, Note, Reminder, Task, ThemeName, Toast } from "./types";
 
 // Screens read and change the copy saved on this device, so they work with no internet.
 // sync.ts keeps that copy in step with the database.
@@ -17,6 +17,8 @@ const EMPTY: AppState = {
   notes: [],
   reminders: [],
   tasks: [],
+  budgetCategories: [],
+  budgetItems: [],
   theme: DEFAULT_THEME,
   brand: DEFAULT_BRAND,
   installDismissed: false,
@@ -293,6 +295,45 @@ export function setFirstTask(id: string) {
     };
   });
 }
+
+/* Budget */
+
+export function saveBudgetCategory(category: BudgetCategory) {
+  commit((data) => ({
+    ...data,
+    budgetCategories: data.budgetCategories.some((item) => item.id === category.id)
+      ? data.budgetCategories.map((item) => (item.id === category.id ? category : item))
+      : [...data.budgetCategories, category],
+  }));
+}
+
+export function deleteBudgetCategory(id: string) {
+  commit((data) => ({
+    ...data,
+    budgetCategories: data.budgetCategories.filter((category) => category.id !== id),
+    budgetItems: data.budgetItems.filter((item) => item.categoryId !== id),
+  }));
+}
+
+export function saveBudgetItem(item: BudgetItem) {
+  commit((data) => ({
+    ...data,
+    budgetItems: [...data.budgetItems.filter((other) => other.id !== item.id), item],
+  }));
+}
+
+export function deleteBudgetItem(id: string) {
+  commit((data) => ({ ...data, budgetItems: data.budgetItems.filter((item) => item.id !== id) }));
+}
+
+/** A month's items, newest date first. */
+export function budgetItemsInMonth(items: BudgetItem[], month: string, categoryId?: string) {
+  return items
+    .filter((item) => item.date.startsWith(month) && (!categoryId || item.categoryId === categoryId))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+}
+
+export const sumAmounts = (items: BudgetItem[]) => items.reduce((total, item) => total + item.amount, 0);
 
 /* Settings */
 
