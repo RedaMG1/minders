@@ -384,6 +384,12 @@ button { cursor: pointer; }
 .note-body { display: block; width: 100%; min-height: 96px; padding: 0; overflow: hidden; border: 0; outline: 0; resize: none; background: none; font-size: 16px; line-height: 1.5; }
 .check-input { display: block; flex: 1; min-width: 0; padding: 7px 0; overflow: hidden; border: 0; outline: 0; resize: none; background: none; font-size: 16px; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
 .check-row, .check-row .task { align-items: flex-start; }
+.check-row.picked { margin-inline: -10px; padding-inline: 10px 0; border-radius: 12px; border-bottom-color: transparent; background: color-mix(in srgb, var(--accent-deep) 16%, transparent); }
+.check-row.picked .check-input { font-weight: 700; }
+.randomiser { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; }
+.randomiser-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding-inline: 14px; border: 1.5px solid var(--accent-deep); border-radius: 20px; background: none; color: var(--accent-deep); font-size: 14px; font-weight: 700; }
+.randomiser-note { color: var(--ink-soft); font-size: 13.5px; }
+.randomiser .ghost { min-height: 36px; margin-left: auto; padding-inline: 8px; }
 .check-row .task input[type="checkbox"] { margin-top: 4px; }
 .check-row .row-btn { height: 40px; margin-top: 4px; }
 .task input:checked + .check-input { color: var(--fg-soft); text-decoration: line-through; }

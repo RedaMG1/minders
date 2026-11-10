@@ -6,6 +6,7 @@ import { useState } from "react";
 import { AutoTextarea } from "@/components/AutoTextarea";
 import { Icon } from "@/components/Icon";
 import { addDays, clock, dayKey, relativeDay } from "@/lib/dates";
+import { pickPool, pickRandom } from "@/lib/randomiser";
 import { addTask, deleteNote, newId, saveNote, showMessage, useApp } from "@/lib/store";
 import type { ChecklistItem, Note } from "@/lib/types";
 
@@ -36,6 +37,9 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
   }
 
   const hasContent = Boolean(note.title.trim() || note.body.trim() || note.items.length);
+  // Picks for items that were deleted since are ignored.
+  const picked = (note.picked ?? []).filter((id) => note.items.some((item) => item.id === id));
+  const poolSize = pickPool(note.items).length;
 
   return (
     <div className="screen">
@@ -105,7 +109,7 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
         {note.items.length > 0 && (
           <div>
             {note.items.map((item) => (
-              <div className="task-row check-row" key={item.id}>
+              <div className={picked.includes(item.id) ? "task-row check-row picked" : "task-row check-row"} key={item.id}>
                 <span className="task">
                   <input
                     type="checkbox"
@@ -134,12 +138,39 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
                   className="row-btn"
                   type="button"
                   aria-label={`Remove ${item.text || "item"}`}
-                  onClick={() => update({ items: note.items.filter((other) => other.id !== item.id) })}
+                  onClick={() =>
+                    update({
+                      items: note.items.filter((other) => other.id !== item.id),
+                      picked: picked.filter((id) => id !== item.id),
+                    })
+                  }
                 >
                   <Icon name="x" />
                 </button>
               </div>
             ))}
+            {poolSize > 0 && (
+              <div className="randomiser">
+                <button
+                  className="randomiser-btn"
+                  type="button"
+                  onClick={() => update({ picked: pickRandom(note.items, picked) })}
+                >
+                  <Icon name="shuffle" small />
+                  Randomiser
+                </button>
+                {picked.length > 0 && (
+                  <>
+                    <span className="randomiser-note" role="status">
+                      {picked.length} picked at random
+                    </span>
+                    <button className="ghost" type="button" onClick={() => update({ picked: [] })}>
+                      Clear
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

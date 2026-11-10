@@ -24,6 +24,8 @@ export type Note = {
   body: string;
   items: ChecklistItem[];
   pinned: boolean;
+  /** Checklist items the Randomiser picked, kept until cleared. */
+  picked?: string[];
   updatedAt: string;
 };
 
