@@ -13,8 +13,8 @@ const TABS: { href: string; label: string; icon: IconName }[] = [
 
 export function TabBar() {
   const path = usePathname().replace(/\/$/, "") || "/";
-  // Pages without their own tab, such as a module, sit under Home.
-  const active = TABS.some((tab) => tab.href === path) ? path : "/";
+  // History belongs to Today. Other pages without their own tab, such as a module, sit under Home.
+  const active = TABS.some((tab) => tab.href === path) ? path : path === "/history" ? "/today" : "/";
 
   return (
     <nav className="tabs" aria-label="Main">

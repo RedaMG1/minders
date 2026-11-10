@@ -46,6 +46,8 @@ export type Task = {
   /** Local date, as YYYY-MM-DD. */
   day: string;
   done: boolean;
+  /** When the task was ticked off. Older tasks may not have it. */
+  doneAt?: string;
   first: boolean;
   moved: boolean;
   createdAt: string;

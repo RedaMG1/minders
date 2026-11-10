@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { AutoTextarea } from "@/components/AutoTextarea";
 import { Icon } from "@/components/Icon";
 import { addDays, clock, dayKey, relativeDay } from "@/lib/dates";
 import { addTask, deleteNote, newId, saveNote, showMessage, useApp } from "@/lib/store";
@@ -10,17 +11,8 @@ import type { ChecklistItem, Note } from "@/lib/types";
 
 function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: string; saved: boolean; now: Date }) {
   const router = useRouter();
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [focusItem, setFocusItem] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-
-  // Grow the text box with its content, so the whole note scrolls as one page.
-  useLayoutEffect(() => {
-    const body = bodyRef.current;
-    if (!body) return;
-    body.style.height = "auto";
-    body.style.height = `${body.scrollHeight}px`;
-  }, [note.body]);
 
   const update = (change: Partial<Note>) => saveNote({ ...note, ...change });
   const updateItem = (id: string, change: Partial<ChecklistItem>) =>
@@ -87,30 +79,33 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
             ? `Saved, ${relativeDay(new Date(note.updatedAt), now).toLowerCase()} at ${clock(new Date(note.updatedAt))}`
             : "Saves as you type"}
         </p>
-        <input
+        <AutoTextarea
           className="note-title"
           id="note-title"
-          type="text"
           placeholder="Title"
           aria-label="Note title"
           value={note.title}
           maxLength={120}
-          onChange={(event) => update({ title: event.target.value })}
+          onChange={(event) => update({ title: event.target.value.replace(/\n/g, " ") })}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              document.getElementById("note-body")?.focus();
+            }
+          }}
         />
-        <textarea
+        <AutoTextarea
           className="note-body"
           id="note-body"
-          ref={bodyRef}
           placeholder="Write your note"
           aria-label="Note text"
-          rows={3}
           value={note.body}
           onChange={(event) => update({ body: event.target.value })}
         />
         {note.items.length > 0 && (
           <div>
             {note.items.map((item) => (
-              <div className="task-row" key={item.id}>
+              <div className="task-row check-row" key={item.id}>
                 <span className="task">
                   <input
                     type="checkbox"
@@ -119,15 +114,14 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
                     checked={item.done}
                     onChange={() => updateItem(item.id, { done: !item.done })}
                   />
-                  <input
+                  <AutoTextarea
                     className="check-input"
                     id={`text-${item.id}`}
-                    type="text"
                     placeholder="List item"
                     aria-label="List item"
                     value={item.text}
                     autoFocus={item.id === focusItem}
-                    onChange={(event) => updateItem(item.id, { text: event.target.value })}
+                    onChange={(event) => updateItem(item.id, { text: event.target.value.replace(/\n/g, " ") })}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();

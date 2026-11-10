@@ -258,11 +258,22 @@ export function addTask(title: string, day: string) {
 }
 
 export function toggleTask(id: string) {
-  changeTask(id, (task) => ({ ...task, done: !task.done }));
+  changeTask(id, (task) =>
+    task.done ? { ...task, done: false, doneAt: undefined } : { ...task, done: true, doneAt: new Date().toISOString() },
+  );
 }
 
 export function moveTask(id: string, day: string, moved: boolean) {
   changeTask(id, (task) => ({ ...task, day, moved, first: false }));
+}
+
+/** Moves several tasks in one go, such as everything left unfinished today. */
+export function moveTasks(ids: string[], day: string) {
+  const moving = new Set(ids);
+  commit((data) => ({
+    ...data,
+    tasks: data.tasks.map((task) => (moving.has(task.id) ? { ...task, day, moved: true, first: false } : task)),
+  }));
 }
 
 export function deleteTask(id: string) {
@@ -303,15 +314,37 @@ export function dismissInstallTip() {
 
 const byCreated = (a: Task, b: Task) => Number(b.first) - Number(a.first) || a.createdAt.localeCompare(b.createdAt);
 
-/** Today's tasks, plus anything unfinished from earlier days. */
+/** Today's tasks, plus anything from earlier days that is unfinished or was finished today. */
 export function tasksForToday(tasks: Task[], current: Date) {
   const today = dayKey(current);
-  return tasks.filter((task) => task.day === today || (task.day < today && !task.done)).sort(byCreated);
+  return tasks
+    .filter((task) => task.day === today || (task.day < today && (!task.done || doneDay(task) === today)))
+    .sort(byCreated);
 }
 
 export function tasksForTomorrow(tasks: Task[], current: Date) {
   const tomorrow = dayKey(addDays(current, 1));
   return tasks.filter((task) => task.day === tomorrow).sort(byCreated);
+}
+
+/** The day a task was finished on. Tasks ticked before this was recorded count on their planned day. */
+export function doneDay(task: Task) {
+  return task.doneAt ? dayKey(new Date(task.doneAt)) : task.day;
+}
+
+/** Every finished task, grouped by the day it was done, newest day first. */
+export function doneHistory(tasks: Task[]) {
+  const days = new Map<string, Task[]>();
+  for (const task of tasks.filter((item) => item.done)) {
+    const day = doneDay(task);
+    days.set(day, [...(days.get(day) ?? []), task]);
+  }
+  return [...days.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([day, items]) => ({
+      day,
+      tasks: items.sort((a, b) => (b.doneAt ?? "").localeCompare(a.doneAt ?? "")),
+    }));
 }
 
 export function upcomingReminders(reminders: Reminder[]) {
