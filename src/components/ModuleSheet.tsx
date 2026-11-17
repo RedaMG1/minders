@@ -5,7 +5,8 @@ import { useState, type FormEvent } from "react";
 import { Icon } from "./Icon";
 import { Sheet } from "./Sheet";
 import { MODULE_COLORS, MODULE_ICONS } from "@/lib/options";
-import { deleteModule, newId, saveModule } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import { currentUserId, deleteModule, newId, ownsModule, saveModule } from "@/lib/store";
 import type { Module, ModuleType } from "@/lib/types";
 
 type ModuleSheetProps = {
@@ -22,13 +23,19 @@ export function ModuleSheet({ module, itemCount = 0, onClose }: ModuleSheetProps
   const [icon, setIcon] = useState<string>(module?.icon ?? MODULE_ICONS[0].value);
   const [color, setColor] = useState(module?.color ?? MODULE_COLORS[0].value);
   const [confirming, setConfirming] = useState(false);
+  const [shared, setShared] = useState(Boolean(module?.shared));
+  const auth = useAuth();
+  const owner = !module || ownsModule(module);
+  // Sharing needs accounts, and only the module's owner can change it.
+  const canShare = Boolean(module) && owner && auth.status === "signed-in";
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
     if (module) {
-      saveModule({ ...module, name: trimmed, icon, color });
+      const sharing = canShare ? { shared, ownerId: shared ? (currentUserId() ?? undefined) : undefined } : {};
+      saveModule({ ...module, name: trimmed, icon, color, ...sharing });
       onClose();
       return;
     }
@@ -143,11 +150,24 @@ export function ModuleSheet({ module, itemCount = 0, onClose }: ModuleSheetProps
         </div>
       </fieldset>
 
+      {canShare && (
+        <label className="setting share-setting">
+          <span>
+            <b>Share with every account</b>
+            <small>Everyone signed in can see it and change its {module?.type}. Only you can stop sharing or delete it.</small>
+          </span>
+          <input className="switch" type="checkbox" id="module-shared" checked={shared} onChange={(event) => setShared(event.target.checked)} />
+        </label>
+      )}
+      {module && !owner && (
+        <p className="field-hint">Shared by another account. Only they can stop sharing or delete it.</p>
+      )}
+
       <button className="primary" type="submit" disabled={!name.trim()}>
         {module ? "Save changes" : "Create module"}
       </button>
 
-      {module &&
+      {module && owner &&
         (confirming ? (
           <div className="confirm">
             <p>

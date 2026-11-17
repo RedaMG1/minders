@@ -607,3 +607,6 @@ fieldset.field > .chips, fieldset.field > .when, fieldset.field > .pick-row { ma
 .account { flex-wrap: wrap; }
 .account .confirm { flex-basis: 100%; }
 .account small { overflow-wrap: anywhere; }
+
+/* Sharing */
+.share-setting { padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; }

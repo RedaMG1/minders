@@ -7,7 +7,9 @@ create table public.items (
   changed_at timestamptz not null,
   synced_at timestamptz not null default now(),
   device text not null,
-  user_id uuid not null references auth.users (id) on delete cascade default auth.uid()
+  user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
+  -- Visible to every signed-in account, and any of them can change it.
+  shared boolean not null default false
 );
 
 comment on table public.items is 'Every module, note, reminder and task, stored one row per record.';
@@ -17,6 +19,7 @@ comment on column public.items.synced_at is 'When the server received the record
 
 create index items_synced_at_idx on public.items (synced_at);
 create index items_user_synced_idx on public.items (user_id, synced_at);
+create index items_shared_idx on public.items (kind) where shared;
 
 -- An offline device may upload old edits late, so an older edit must never replace a newer one.
 create function public.items_keep_newest()
@@ -31,6 +34,13 @@ begin
     end if;
     -- An item can never move to another account.
     new.user_id := old.user_id;
+    -- Someone else's shared item stays shared, and a shared module can't be deleted by someone else.
+    if old.user_id is distinct from auth.uid() then
+      new.shared := old.shared;
+      if old.kind = 'module' and old.shared then
+        new.deleted := old.deleted;
+      end if;
+    end if;
   end if;
   new.synced_at := clock_timestamp();
   return new;
@@ -43,8 +53,8 @@ for each row execute function public.items_keep_newest();
 
 alter table public.items enable row level security;
 
--- Each account can only see and change its own rows. Nothing can be permanently deleted:
+-- Each account can only see and change its own rows, plus shared ones. Nothing can be permanently deleted:
 -- deleting only sets the deleted flag.
-create policy "Accounts read their items" on public.items for select to authenticated using (user_id = (select auth.uid()));
+create policy "Accounts read their own and shared items" on public.items for select to authenticated using (user_id = (select auth.uid()) or shared);
 create policy "Accounts add their items" on public.items for insert to authenticated with check (user_id = (select auth.uid()));
-create policy "Accounts change their items" on public.items for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+create policy "Accounts change their own and shared items" on public.items for update to authenticated using (user_id = (select auth.uid()) or shared) with check (user_id = (select auth.uid()) or shared);

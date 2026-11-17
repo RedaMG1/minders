@@ -122,6 +122,7 @@ export default function HomePage() {
                   <span className="kind">
                     <Icon name={module.type === "notes" ? "note" : "bell"} small />
                     {module.type === "notes" ? "Notes" : "Reminders"}
+                    {module.shared && " · Shared"}
                   </span>
                 </div>
                 <h4>{module.name}</h4>

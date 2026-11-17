@@ -1,6 +1,9 @@
 -- Accounts, part 2 of 2. Run after the account redareada6@gmail.com has been created and confirmed.
 -- Gives every existing row to that account, then turns off access without signing in.
 
+-- The trigger stops items from moving between accounts, so pause it to give unowned items their first owner.
+alter table public.items disable trigger items_keep_newest;
+
 do $$
 declare
   owner_id uuid;
@@ -12,6 +15,8 @@ begin
   update public.items set user_id = owner_id where user_id is null;
 end;
 $$;
+
+alter table public.items enable trigger items_keep_newest;
 
 alter table public.items alter column user_id set not null;
 

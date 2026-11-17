@@ -30,6 +30,8 @@ export type ItemRow = {
   deleted: boolean;
   changed_at: string;
   device: string;
+  /** Visible to every account. Set on shared modules and on the notes and reminders inside them. */
+  shared: boolean;
 };
 
 export type SyncStatus = "off" | "saving" | "saved" | "offline";
@@ -46,6 +48,8 @@ export const COLLECTIONS = [
 type SyncHandlers = {
   getState: () => AppState;
   applyRemote: (rows: ItemRow[], isNewer: (row: ItemRow) => boolean) => void;
+  /** Removes shared modules from other accounts that are no longer shared. */
+  pruneShared: (stillShared: Set<string>) => void;
   onStatusChange: () => void;
 };
 
@@ -95,14 +99,24 @@ function setStatus(next: SyncStatus) {
 export const getSyncStatus = () => status;
 export const pendingChanges = () => Object.keys(outbox).length;
 
-function enqueue(kind: Kind, record: SyncedRecord, deleted: boolean, changedAt: string) {
-  outbox[record.id] = { id: record.id, kind, data: record, deleted, changed_at: changedAt, device: deviceId() };
+/** Whether an item is shared: a shared module itself, or a note or reminder inside one. */
+function isShared(kind: Kind, record: SyncedRecord, sharedModules: Set<string>) {
+  if (kind === "module") return Boolean((record as Module).shared);
+  if (kind === "note" || kind === "reminder") return sharedModules.has((record as Note | Reminder).moduleId);
+  return false;
+}
+
+const sharedModulesOf = (state: AppState) => new Set(state.modules.filter((module) => module.shared).map((module) => module.id));
+
+function enqueue(kind: Kind, record: SyncedRecord, deleted: boolean, changedAt: string, sharedModules: Set<string>) {
+  outbox[record.id] = { id: record.id, kind, data: record, deleted, changed_at: changedAt, device: deviceId(), shared: isShared(kind, record, sharedModules) };
 }
 
 /** Queues everything that differs between two versions of the saved data. */
 export function trackChanges(previous: AppState, next: AppState) {
   if (status === "off") return;
   const changedAt = new Date().toISOString();
+  const sharedModules = sharedModulesOf(next);
   let changed = false;
 
   for (const [kind, key] of COLLECTIONS) {
@@ -113,12 +127,23 @@ export function trackChanges(previous: AppState, next: AppState) {
       after.add(record.id);
       const old = before.get(record.id);
       if (old === record || (old && JSON.stringify(old) === JSON.stringify(record))) continue;
-      enqueue(kind, record, false, changedAt);
+      enqueue(kind, record, false, changedAt, sharedModules);
       changed = true;
     }
     for (const [id, record] of before) {
       if (after.has(id)) continue;
-      enqueue(kind, record, true, changedAt);
+      enqueue(kind, record, true, changedAt, sharedModules);
+      changed = true;
+    }
+  }
+
+  // Sharing or unsharing a module also shares or unshares everything already inside it.
+  const wasShared = sharedModulesOf(previous);
+  const flipped = next.modules.filter((module) => wasShared.has(module.id) !== sharedModules.has(module.id)).map((module) => module.id);
+  for (const [kind, key] of [["note", "notes"], ["reminder", "reminders"]] as const) {
+    for (const record of next[key]) {
+      if (!flipped.includes(record.moduleId)) continue;
+      enqueue(kind, record, false, changedAt, sharedModules);
       changed = true;
     }
   }
@@ -135,11 +160,12 @@ export function trackChanges(previous: AppState, next: AppState) {
 function seedFromDevice(account: string) {
   if (localStorage.getItem(seededKey(account)) || !handlers) return;
   const data = handlers.getState();
+  const sharedModules = sharedModulesOf(data);
   for (const [kind, key] of COLLECTIONS) {
     for (const record of data[key]) {
       if (outbox[record.id]) continue;
       const stamped = record as { updatedAt?: string; createdAt?: string };
-      enqueue(kind, record, false, stamped.updatedAt ?? stamped.createdAt ?? new Date().toISOString());
+      enqueue(kind, record, false, stamped.updatedAt ?? stamped.createdAt ?? new Date().toISOString(), sharedModules);
     }
   }
   saveOutbox();
@@ -166,7 +192,7 @@ async function download(supabase: SupabaseClient, account: string) {
   for (;;) {
     const { data, error } = await supabase
       .from(TABLE)
-      .select("id, kind, data, deleted, changed_at, device, synced_at")
+      .select("id, kind, data, deleted, changed_at, device, shared, synced_at")
       .gte("synced_at", since)
       .order("synced_at")
       .order("id")
@@ -183,9 +209,14 @@ async function download(supabase: SupabaseClient, account: string) {
       if (row.synced_at > cursor) cursor = row.synced_at;
     }
     localStorage.setItem(cursorKey(account), cursor);
-    if (rows.length < PAGE_SIZE) return;
+    if (rows.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
+
+  // A module that stops being shared just becomes invisible, so ask which ones are still shared.
+  const { data: shared, error } = await supabase.from(TABLE).select("id").eq("kind", "module").eq("shared", true).eq("deleted", false);
+  if (error) throw error;
+  handlers?.pruneShared(new Set((shared ?? []).map((row) => row.id as string)));
 }
 
 /** Uploads the queue, then fetches what other devices changed. */

@@ -9,6 +9,10 @@ export type Module = {
   color: string;
   type: ModuleType;
   createdAt: string;
+  /** Shared modules are visible to every account, and anyone signed in can change their notes. */
+  shared?: boolean;
+  /** The account that shared it. Only that account can stop sharing or delete the module. */
+  ownerId?: string;
 };
 
 export type ChecklistItem = {

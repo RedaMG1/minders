@@ -34,6 +34,10 @@ let timer: ReturnType<typeof setInterval> | undefined;
 let stopAccounts: (() => void) | undefined;
 /** Whether someone is signed in. Without a database there are no accounts, so the data is always open. */
 let signedIn = false;
+let currentUser: string | null = null;
+
+/** The signed-in account's id, or null. */
+export const currentUserId = () => currentUser;
 const dataIsOpen = () => signedIn || !getSupabase();
 const listeners = new Set<() => void>();
 
@@ -84,6 +88,31 @@ function commit(change: (current: AppState) => AppState) {
 }
 
 /** Brings in what other devices changed, without queueing it to upload again. */
+/** Drops shared modules from other accounts that are no longer shared, without uploading anything. */
+function pruneShared(stillShared: Set<string>) {
+  const current = getState();
+  const gone = new Set(
+    current.modules
+      .filter((module) => module.shared && module.ownerId && module.ownerId !== currentUser && !stillShared.has(module.id))
+      .map((module) => module.id),
+  );
+  if (!gone.size) return;
+  save({
+    ...current,
+    modules: current.modules.filter((module) => !gone.has(module.id)),
+    notes: current.notes.filter((note) => !gone.has(note.moduleId)),
+    reminders: current.reminders.filter((reminder) => !gone.has(reminder.moduleId)),
+  });
+  notify();
+}
+
+/** Whether this account can share, unshare or delete a module. */
+export const ownsModule = (module: Module) => !module.ownerId || module.ownerId === currentUser;
+
+export function setModuleShared(module: Module, shared: boolean) {
+  saveModule({ ...module, shared, ownerId: shared ? (currentUser ?? undefined) : undefined });
+}
+
 function applyRemote(rows: ItemRow[], isNewer: (row: ItemRow) => boolean) {
   const current = getState();
   let next = current;
@@ -179,6 +208,7 @@ function switchAccount(userId: string | null) {
     localStorage.setItem(OWNER_KEY, userId);
   }
   signedIn = Boolean(userId);
+  currentUser = userId;
   setSyncAccount(userId);
   if (signedIn) tick();
 }
@@ -200,7 +230,7 @@ function subscribe(listener: () => void) {
     document.addEventListener("visibilitychange", tick);
     timer = setInterval(tick, CLOCK_SECONDS * 1000);
     // Sync loads its saved queue first, because a reminder going off in tick() adds to that queue.
-    startSync({ getState, applyRemote, onStatusChange: notify });
+    startSync({ getState, applyRemote, pruneShared, onStatusChange: notify });
     stopAccounts = onAccountChange(switchAccount);
     tick();
   }

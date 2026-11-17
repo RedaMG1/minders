@@ -245,6 +245,7 @@ function ModuleScreen({ module, state, now }: { module: Module; state: AppState;
               <span className="kind">
                 <Icon name={isNotes ? "note" : "bell"} small />
                 {isNotes ? "Notes" : "Reminders"}
+                {module.shared && " · Shared with every account"}
               </span>
             </div>
           </div>
