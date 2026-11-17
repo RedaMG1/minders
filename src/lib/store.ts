@@ -317,7 +317,7 @@ export function deleteReminder(id: string) {
 const changeTask = (id: string, change: (task: Task) => Task) =>
   commit((data) => ({ ...data, tasks: data.tasks.map((task) => (task.id === id ? change(task) : task)) }));
 
-export function addTask(title: string, day: string) {
+export function addTask(title: string, day: string, moduleId?: string) {
   const task: Task = {
     id: newId(),
     title,
@@ -326,8 +326,22 @@ export function addTask(title: string, day: string) {
     first: false,
     moved: false,
     createdAt: new Date().toISOString(),
+    ...(moduleId ? { moduleId } : {}),
   };
   commit((data) => ({ ...data, tasks: [...data.tasks, task] }));
+}
+
+/** Ticks a checklist item in a note on or off, such as from a module task. */
+export function toggleNoteItem(noteId: string, itemId: string) {
+  const updatedAt = new Date().toISOString();
+  commit((data) => ({
+    ...data,
+    notes: data.notes.map((note) =>
+      note.id === noteId
+        ? { ...note, updatedAt, items: note.items.map((item) => (item.id === itemId ? { ...item, done: !item.done } : item)) }
+        : note,
+    ),
+  }));
 }
 
 export function toggleTask(id: string) {

@@ -57,6 +57,8 @@ export type Task = {
   first: boolean;
   moved: boolean;
   createdAt: string;
+  /** Set when the task is a whole module, so its notes and reminders can be checked from the task. */
+  moduleId?: string;
 };
 
 export type BudgetCategory = {

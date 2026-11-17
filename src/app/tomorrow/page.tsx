@@ -1,14 +1,47 @@
 "use client";
 
+import { useState } from "react";
 import { Icon } from "@/components/Icon";
+import { ModulePeek } from "@/components/ModulePeek";
+import { ModulePickerSheet } from "@/components/ModulePickerSheet";
 import { QuickAdd } from "@/components/QuickAdd";
 import { TabBar } from "@/components/TabBar";
-import { TaskRow } from "@/components/TaskRow";
+import { PeekButton, TaskRow, useTaskTitle } from "@/components/TaskRow";
 import { addDays, dayKey, dayMonthLong, weekdayLong } from "@/lib/dates";
 import { moveTask, setFirstTask, tasksForTomorrow, toggleTask, useApp } from "@/lib/store";
+import type { Task } from "@/lib/types";
+
+function FirstThing({ task }: { task: Task }) {
+  const [open, setOpen] = useState(false);
+  const title = useTaskTitle(task);
+  return (
+    <div className="first-wrap">
+      <div className="first-thing">
+        <label className="first-label">
+          <input type="checkbox" id={`task-${task.id}`} checked={task.done} onChange={() => toggleTask(task.id)} />
+          <span>
+            <span className="label">First thing</span>
+            <strong>{title}</strong>
+          </span>
+        </label>
+        {task.moduleId && <PeekButton title={title} open={open} onToggle={() => setOpen(!open)} />}
+        <button
+          className="row-btn"
+          type="button"
+          aria-label={`Remove ${title} as first thing`}
+          onClick={() => setFirstTask(task.id)}
+        >
+          <Icon name="star" />
+        </button>
+      </div>
+      {task.moduleId && open && <ModulePeek moduleId={task.moduleId} />}
+    </div>
+  );
+}
 
 export default function TomorrowPage() {
   const app = useApp();
+  const [picking, setPicking] = useState(false);
   if (!app) return <div className="screen night" />;
 
   const { state, now } = app;
@@ -37,28 +70,7 @@ export default function TomorrowPage() {
 
       <div className="scroll tomorrow-body">
         {first ? (
-          <div className="first-thing">
-            <label className="first-label">
-              <input
-                type="checkbox"
-                id={`task-${first.id}`}
-                checked={first.done}
-                onChange={() => toggleTask(first.id)}
-              />
-              <span>
-                <span className="label">First thing</span>
-                <strong>{first.title}</strong>
-              </span>
-            </label>
-            <button
-              className="row-btn"
-              type="button"
-              aria-label={`Remove ${first.title} as first thing`}
-              onClick={() => setFirstTask(first.id)}
-            >
-              <Icon name="star" />
-            </button>
-          </div>
+          <FirstThing task={first} />
         ) : (
           <p className="first-empty">
             <b>Pick your first thing</b>
@@ -95,10 +107,16 @@ export default function TomorrowPage() {
             }
           />
         ))}
+
+        <button className="move-all" type="button" onClick={() => setPicking(true)}>
+          <Icon name="grid" small />
+          Add a whole module
+        </button>
       </div>
 
       <QuickAdd id="add-tomorrow" day={dayKey(tomorrow)} placeholder="What do you want to do tomorrow?" />
       <TabBar />
+      {picking && <ModulePickerSheet day={dayKey(tomorrow)} onClose={() => setPicking(false)} />}
     </div>
   );
 }

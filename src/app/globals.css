@@ -610,3 +610,36 @@ fieldset.field > .chips, fieldset.field > .when, fieldset.field > .pick-row { ma
 
 /* Sharing */
 .share-setting { padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; }
+
+/* A whole module planned as a task */
+.task-row.module-task { flex-wrap: wrap; }
+.tag.module-tag { background: color-mix(in srgb, var(--accent-deep) 18%, transparent); color: var(--fg); }
+.peek-btn.on { color: var(--accent-deep); }
+.module-peek { flex-basis: 100%; display: grid; gap: 10px; margin: 0 0 12px 38px; padding: 10px 12px; border-left: 2px solid var(--rule); }
+.first-wrap .module-peek { margin: 10px 0 4px 16px; }
+.peek-note { display: grid; gap: 2px; }
+.peek-title { display: flex; align-items: center; gap: 8px; min-height: 32px; color: var(--fg); font-weight: 600; text-decoration: none; }
+.peek-title span { min-width: 0; overflow-wrap: anywhere; }
+.peek-title small { margin-left: auto; color: var(--fg-soft); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.peek-title .i { flex: none; color: var(--fg-soft); }
+.peek-item { display: flex; align-items: flex-start; gap: 10px; min-height: 36px; padding: 6px 0; cursor: pointer; font-size: 15px; }
+.peek-item input { appearance: none; width: 20px; height: 20px; flex: none; margin: 1px 0 0; border: 2px solid var(--fg-soft); border-radius: 50%; cursor: pointer; background-position: center; background-repeat: no-repeat; background-size: 12px; }
+.peek-item input:checked { border-color: var(--accent-deep); background-color: var(--accent-deep); background-image: var(--check); }
+.peek-item span { min-width: 0; overflow-wrap: anywhere; }
+.peek-item input:checked + span { color: var(--fg-soft); text-decoration: line-through; }
+.peek-body { color: var(--fg-soft); font-size: 14px; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.peek-reminder { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: 15px; }
+.peek-reminder span { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.peek-reminder small { color: var(--fg-soft); font-size: 13px; white-space: nowrap; }
+.peek-empty { color: var(--fg-soft); font-size: 14px; }
+.peek-open { display: inline-flex; align-items: center; gap: 4px; justify-self: start; min-height: 32px; color: var(--accent-deep); font-size: 14px; font-weight: 600; text-decoration: none; }
+.night .peek-open { color: var(--moon); }
+.pick-modules { display: grid; gap: 8px; }
+.pick-module { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px 10px 10px; border: var(--module-border); border-radius: 18px; background: var(--tint); color: var(--module-fg); text-align: left; }
+.pick-module:disabled { opacity: 0.6; }
+.pick-name { flex: 1; min-width: 0; display: grid; }
+.pick-name b { overflow-wrap: anywhere; font-size: 16px; font-weight: 700; }
+.pick-name small { color: var(--module-soft); font-size: 13px; }
+.pick-added { font-size: 13px; font-weight: 600; color: var(--module-soft); }
+.first-thing .peek-btn, .first-thing .peek-btn.on { color: inherit; }
+.first-thing .peek-btn.on { border-radius: 12px; background: color-mix(in srgb, currentColor 18%, transparent); }
