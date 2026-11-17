@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { addDays, dayKey, nextOccurrence, whenLabel } from "./dates";
 import { DEFAULT_BRAND, DEFAULT_THEME } from "./options";
 import { onAccountChange, signOutOfAccount } from "./auth";
-import { clearQueue, COLLECTIONS, getSyncStatus, pendingChanges, setSyncAccount, startSync, stopSync, trackChanges, type ItemRow } from "./sync";
+import { clearQueue, COLLECTIONS, getSupabase, getSyncStatus, pendingChanges, setSyncAccount, startSync, stopSync, trackChanges, type ItemRow } from "./sync";
 import type { AppState, BudgetCategory, BudgetItem, Module, NotificationSettings, Note, Reminder, Task, ThemeName, Toast } from "./types";
 
 // Screens read and change the copy saved on this device, so they work with no internet.
@@ -32,6 +32,9 @@ let now: Date | null = null;
 let toasts: Toast[] = [];
 let timer: ReturnType<typeof setInterval> | undefined;
 let stopAccounts: (() => void) | undefined;
+/** Whether someone is signed in. Without a database there are no accounts, so the data is always open. */
+let signedIn = false;
+const dataIsOpen = () => signedIn || !getSupabase();
 const listeners = new Set<() => void>();
 
 export function newId() {
@@ -145,7 +148,8 @@ function fireDueReminders(current: Date) {
 
 function tick() {
   const current = new Date();
-  fireDueReminders(current);
+  // Reminders wait until someone signs in, so the sign-in screen never shows anyone's data.
+  if (dataIsOpen()) fireDueReminders(current);
   if (!now || now.getMinutes() !== current.getMinutes() || now.getHours() !== current.getHours()) {
     now = current;
     notify();
@@ -174,7 +178,9 @@ function switchAccount(userId: string | null) {
     if (owner && owner !== userId) clearDeviceData();
     localStorage.setItem(OWNER_KEY, userId);
   }
+  signedIn = Boolean(userId);
   setSyncAccount(userId);
+  if (signedIn) tick();
 }
 
 /** Changes made on this device that haven't uploaded yet. */
@@ -223,7 +229,7 @@ export function useApp() {
 
 const noToasts: Toast[] = [];
 export function useToasts() {
-  return useSyncExternalStore(subscribe, () => toasts, () => noToasts);
+  return useSyncExternalStore(subscribe, () => (dataIsOpen() ? toasts : noToasts), () => noToasts);
 }
 
 /* Modules */
