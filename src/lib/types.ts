@@ -75,6 +75,14 @@ export type BudgetItem = {
   createdAt: string;
 };
 
+export type NotificationSettings = {
+  enabled: boolean;
+  digestEnabled: boolean;
+  /** Local time for the morning summary, as HH:MM. */
+  digestTime: string;
+  remindersEnabled: boolean;
+};
+
 export type AppState = {
   modules: Module[];
   notes: Note[];
@@ -85,6 +93,8 @@ export type AppState = {
   theme: ThemeName;
   brand: string;
   installDismissed: boolean;
+  /** This device's notification settings. Not synced: each phone or computer chooses its own. */
+  notifications?: NotificationSettings;
   /** When a backup was last downloaded on this device. */
   lastBackupAt?: string;
 };

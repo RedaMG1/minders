@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { AuthScreen, NewPasswordScreen } from "./AuthScreen";
 import { Icon } from "./Icon";
+import { useAuth } from "@/lib/auth";
 import { dismissToast, useApp, useToasts } from "@/lib/store";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const toasts = useToasts();
   const app = useApp();
+  const auth = useAuth();
   const theme = app?.state.theme;
   const brand = app?.state.brand;
 
@@ -23,9 +26,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Without a database there are no accounts, so the app opens straight away.
+  let content = children;
+  if (auth.status === "loading") content = <div className="screen" />;
+  if (auth.status === "signed-out") content = <AuthScreen />;
+  if (auth.status === "recovering") content = <NewPasswordScreen email={auth.email} />;
+
   return (
     <>
-      {children}
+      {content}
       {toasts.length > 0 && (
         <div className="toasts" role="status" aria-live="polite">
           {toasts.map((toast) => (

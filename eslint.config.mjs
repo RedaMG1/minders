@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The notification server runs on Deno and is checked with Deno.
+    "supabase/**",
   ]),
 ]);
 

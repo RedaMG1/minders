@@ -1,14 +1,17 @@
 import { useSyncExternalStore } from "react";
 import { addDays, dayKey, nextOccurrence, whenLabel } from "./dates";
 import { DEFAULT_BRAND, DEFAULT_THEME } from "./options";
-import { COLLECTIONS, getSyncStatus, startSync, stopSync, trackChanges, type ItemRow } from "./sync";
-import type { AppState, BudgetCategory, BudgetItem, Module, Note, Reminder, Task, ThemeName, Toast } from "./types";
+import { onAccountChange, signOutOfAccount } from "./auth";
+import { clearQueue, COLLECTIONS, getSyncStatus, pendingChanges, setSyncAccount, startSync, stopSync, trackChanges, type ItemRow } from "./sync";
+import type { AppState, BudgetCategory, BudgetItem, Module, NotificationSettings, Note, Reminder, Task, ThemeName, Toast } from "./types";
 
 // Screens read and change the copy saved on this device, so they work with no internet.
 // sync.ts keeps that copy in step with the database.
 const DATA_KEY = "minders-data";
 const COLOR_KEY = "minders-color";
 const THEME_KEY = "minders-theme";
+/** The account this device's data belongs to. */
+const OWNER_KEY = "minders-owner";
 const TOAST_SECONDS = 3;
 const CLOCK_SECONDS = 15;
 
@@ -28,6 +31,7 @@ let state: AppState | null = null;
 let now: Date | null = null;
 let toasts: Toast[] = [];
 let timer: ReturnType<typeof setInterval> | undefined;
+let stopAccounts: (() => void) | undefined;
 const listeners = new Set<() => void>();
 
 export function newId() {
@@ -154,6 +158,35 @@ function onStorage(event: StorageEvent) {
   notify();
 }
 
+/** Empties this device's copy, keeping only its look. Used when an account signs out or another signs in. */
+function clearDeviceData() {
+  const current = getState();
+  clearQueue();
+  save({ ...EMPTY, theme: current.theme, brand: current.brand, installDismissed: current.installDismissed });
+  toasts = [];
+  notify();
+}
+
+function switchAccount(userId: string | null) {
+  if (userId) {
+    // A device with no owner yet keeps its data for the first account, so nothing written before accounts is lost.
+    const owner = localStorage.getItem(OWNER_KEY);
+    if (owner && owner !== userId) clearDeviceData();
+    localStorage.setItem(OWNER_KEY, userId);
+  }
+  setSyncAccount(userId);
+}
+
+/** Changes made on this device that haven't uploaded yet. */
+export const unsyncedChanges = () => pendingChanges();
+
+/** Signs out and clears this device's copy, so the next person never sees it. */
+export async function signOutAndClear() {
+  await signOutOfAccount();
+  clearDeviceData();
+  localStorage.removeItem(OWNER_KEY);
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   if (listeners.size === 1) {
@@ -162,6 +195,7 @@ function subscribe(listener: () => void) {
     timer = setInterval(tick, CLOCK_SECONDS * 1000);
     // Sync loads its saved queue first, because a reminder going off in tick() adds to that queue.
     startSync({ getState, applyRemote, onStatusChange: notify });
+    stopAccounts = onAccountChange(switchAccount);
     tick();
   }
   return () => {
@@ -170,6 +204,7 @@ function subscribe(listener: () => void) {
       window.removeEventListener("storage", onStorage);
       document.removeEventListener("visibilitychange", tick);
       clearInterval(timer);
+      stopAccounts?.();
       stopSync();
     }
   };
@@ -345,6 +380,10 @@ export function setTheme(theme: ThemeName) {
 export function setBrand(brand: string) {
   document.documentElement.style.setProperty("--brand", brand);
   commit((data) => ({ ...data, brand }));
+}
+
+export function setNotificationSettings(notifications: NotificationSettings) {
+  commit((data) => ({ ...data, notifications }));
 }
 
 export function markBackedUp(at: string) {

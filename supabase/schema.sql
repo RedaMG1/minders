@@ -6,7 +6,8 @@ create table public.items (
   deleted boolean not null default false,
   changed_at timestamptz not null,
   synced_at timestamptz not null default now(),
-  device text not null
+  device text not null,
+  user_id uuid not null references auth.users (id) on delete cascade default auth.uid()
 );
 
 comment on table public.items is 'Every module, note, reminder and task, stored one row per record.';
@@ -15,6 +16,7 @@ comment on column public.items.changed_at is 'When the record was edited on the 
 comment on column public.items.synced_at is 'When the server received the record. Devices use it to fetch what is new.';
 
 create index items_synced_at_idx on public.items (synced_at);
+create index items_user_synced_idx on public.items (user_id, synced_at);
 
 -- An offline device may upload old edits late, so an older edit must never replace a newer one.
 create function public.items_keep_newest()
@@ -23,8 +25,12 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  if tg_op = 'UPDATE' and new.changed_at < old.changed_at then
-    return null;
+  if tg_op = 'UPDATE' then
+    if new.changed_at < old.changed_at then
+      return null;
+    end if;
+    -- An item can never move to another account.
+    new.user_id := old.user_id;
   end if;
   new.synced_at := clock_timestamp();
   return new;
@@ -37,8 +43,8 @@ for each row execute function public.items_keep_newest();
 
 alter table public.items enable row level security;
 
--- This is a personal app with no login, so the public key can read and write.
--- Nothing can be permanently deleted through it: deleting only sets the deleted flag.
-create policy "App can read items" on public.items for select to anon using (true);
-create policy "App can add items" on public.items for insert to anon with check (true);
-create policy "App can change items" on public.items for update to anon using (true) with check (true);
+-- Each account can only see and change its own rows. Nothing can be permanently deleted:
+-- deleting only sets the deleted flag.
+create policy "Accounts read their items" on public.items for select to authenticated using (user_id = (select auth.uid()));
+create policy "Accounts add their items" on public.items for insert to authenticated with check (user_id = (select auth.uid()));
+create policy "Accounts change their items" on public.items for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));

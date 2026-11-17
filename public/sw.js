@@ -1,7 +1,7 @@
 // Keeps the app working offline. Bump VERSION to drop the old caches after a change here.
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE = `minders-${VERSION}`;
-const PAGES = ["/", "/today", "/tomorrow", "/reminders", "/theme", "/history", "/budget", "/budget/category", "/module", "/note", "/search"];
+const PAGES = ["/", "/today", "/tomorrow", "/reminders", "/theme", "/history", "/budget", "/budget/category", "/notifications", "/module", "/note", "/search"];
 const FILES = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -52,4 +52,36 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
   event.respondWith(url.pathname.startsWith("/_next/static/") ? cacheFirst(request) : networkFirst(request));
+});
+
+// Shows a notification sent by the server, even when the app is closed.
+self.addEventListener("push", (event) => {
+  let message = {};
+  try {
+    message = event.data ? event.data.json() : {};
+  } catch {
+    message = { body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(message.title || "Minders", {
+      body: message.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: message.tag,
+      data: { url: message.url || "/" },
+    }),
+  );
+});
+
+// Tapping a notification opens the page it is about, reusing an open window if there is one.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((client) => client.url.startsWith(self.location.origin));
+      if (!open) return self.clients.openWindow(url);
+      return open.focus().then((client) => client.navigate(url));
+    }),
+  );
 });

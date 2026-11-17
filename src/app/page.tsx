@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { AccountCard } from "@/components/AccountCard";
 import { BackupButton } from "@/components/BackupButton";
 import { Icon, ModuleIcon } from "@/components/Icon";
 import { ModuleSheet } from "@/components/ModuleSheet";
@@ -52,6 +53,9 @@ export default function HomePage() {
           <div className="head-actions">
             <Link className="icon-btn" href="/search" aria-label="Search everything">
               <Icon name="search" />
+            </Link>
+            <Link className="icon-btn" href="/notifications" aria-label="Notifications">
+              <Icon name="bell" />
             </Link>
             <Link className="theme-btn" href="/theme">
               <Icon name="palette" />
@@ -155,6 +159,7 @@ export default function HomePage() {
         )}
 
         <BackupButton state={state} now={now} />
+        <AccountCard notificationsOn={Boolean(state.notifications?.enabled)} />
 
         {syncStatus !== "off" && (
           <p className="sync-status" role="status">

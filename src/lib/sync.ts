@@ -6,10 +6,10 @@ import type { AppState, BudgetCategory, BudgetItem, Module, Note, Reminder, Task
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-// Tracked per project, so pointing the app at a new database uploads this device's data to it.
+// Tracked per project and per account, so a new database or a new account gets this device's data.
 const projectRef = supabaseUrl ? new URL(supabaseUrl).hostname.split(".")[0] : "";
-const CURSOR_KEY = `minders-sync-cursor:${projectRef}`;
-const SEEDED_KEY = `minders-sync-seeded:${projectRef}`;
+const cursorKey = (account: string) => `minders-sync-cursor:${projectRef}:${account}`;
+const seededKey = (account: string) => `minders-sync-seeded:${projectRef}:${account}`;
 const OUTBOX_KEY = "minders-outbox";
 const DEVICE_KEY = "minders-device";
 const TABLE = "items";
@@ -50,6 +50,8 @@ type SyncHandlers = {
 };
 
 let client: SupabaseClient | null = null;
+/** The signed-in account. Nothing syncs without one. */
+let userId: string | null = null;
 let handlers: SyncHandlers | null = null;
 let outbox: Record<string, ItemRow> = {};
 let status: SyncStatus = supabaseUrl && supabaseKey ? "saving" : "off";
@@ -130,8 +132,8 @@ export function trackChanges(previous: AppState, next: AppState) {
 }
 
 /** The first time this device connects, everything already on it goes into the queue. */
-function seedFromDevice() {
-  if (localStorage.getItem(SEEDED_KEY) || !handlers) return;
+function seedFromDevice(account: string) {
+  if (localStorage.getItem(seededKey(account)) || !handlers) return;
   const data = handlers.getState();
   for (const [kind, key] of COLLECTIONS) {
     for (const record of data[key]) {
@@ -141,7 +143,7 @@ function seedFromDevice() {
     }
   }
   saveOutbox();
-  localStorage.setItem(SEEDED_KEY, "1");
+  localStorage.setItem(seededKey(account), "1");
 }
 
 async function upload(supabase: SupabaseClient) {
@@ -156,8 +158,8 @@ async function upload(supabase: SupabaseClient) {
   saveOutbox();
 }
 
-async function download(supabase: SupabaseClient) {
-  let cursor = localStorage.getItem(CURSOR_KEY) ?? "1970-01-01T00:00:00Z";
+async function download(supabase: SupabaseClient, account: string) {
+  let cursor = localStorage.getItem(cursorKey(account)) ?? "1970-01-01T00:00:00Z";
   const since = new Date(new Date(cursor).getTime() - CURSOR_OVERLAP_MS).toISOString();
   let offset = 0;
 
@@ -180,7 +182,7 @@ async function download(supabase: SupabaseClient) {
     for (const row of rows) {
       if (row.synced_at > cursor) cursor = row.synced_at;
     }
-    localStorage.setItem(CURSOR_KEY, cursor);
+    localStorage.setItem(cursorKey(account), cursor);
     if (rows.length < PAGE_SIZE) return;
     offset += PAGE_SIZE;
   }
@@ -188,7 +190,8 @@ async function download(supabase: SupabaseClient) {
 
 /** Uploads the queue, then fetches what other devices changed. */
 export async function syncNow() {
-  if (!client) return;
+  const account = userId;
+  if (!client || !account) return;
   if (running) {
     runAgain = true;
     return;
@@ -197,7 +200,9 @@ export async function syncNow() {
   clearTimeout(uploadTimer);
   try {
     await upload(client);
-    await download(client);
+    // Signing out while this ran would otherwise bring the old account's data back.
+    if (account !== userId) return;
+    await download(client, account);
     setStatus(pendingChanges() ? "saving" : "saved");
   } catch {
     setStatus("offline");
@@ -215,16 +220,26 @@ function onWake() {
   if (document.visibilityState === "visible") void syncNow();
 }
 
+/** The database connection, or null when this build has no database settings. */
+export function getSupabase() {
+  if (!supabaseUrl || !supabaseKey) return null;
+  client ??= createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "minders-auth" },
+  });
+  return client;
+}
+
+/** Where the notifications server function lives, or null without database settings. */
+export const notificationsUrl = supabaseUrl ? `${supabaseUrl}/functions/v1/notifications` : null;
+export const publishableKey = supabaseKey ?? "";
+
 export function startSync(syncHandlers: SyncHandlers) {
   handlers = syncHandlers;
-  if (!supabaseUrl || !supabaseKey) return;
-  client ??= createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  if (!getSupabase()) return;
   outbox = readJson(OUTBOX_KEY, {});
-  seedFromDevice();
   window.addEventListener("online", onWake);
   document.addEventListener("visibilitychange", onWake);
   refreshTimer = setInterval(onWake, REFRESH_SECONDS * 1000);
-  void syncNow();
 }
 
 export function stopSync() {
@@ -232,4 +247,23 @@ export function stopSync() {
   document.removeEventListener("visibilitychange", onWake);
   clearInterval(refreshTimer);
   clearTimeout(uploadTimer);
+}
+
+/** Starts syncing for an account, or stops when signed out. */
+export function setSyncAccount(account: string | null) {
+  if (account === userId) return;
+  userId = account;
+  if (!account) {
+    clearTimeout(uploadTimer);
+    return;
+  }
+  seedFromDevice(account);
+  setStatus("saving");
+  void syncNow();
+}
+
+/** Empties the upload queue, for when this device's data is cleared on sign out. */
+export function clearQueue() {
+  outbox = {};
+  saveOutbox();
 }
