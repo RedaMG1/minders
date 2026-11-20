@@ -8,7 +8,7 @@ import { Icon } from "@/components/Icon";
 import { MonthSwitcher } from "@/components/MonthSwitcher";
 import { TabBar } from "@/components/TabBar";
 import { formatMoney, isMonthKey, monthKey, monthLabel } from "@/lib/money";
-import { budgetItemsInMonth, sumAmounts, useApp } from "@/lib/store";
+import { budgetItemsInMonth, categoryFamily, sumAmounts, useApp } from "@/lib/store";
 
 /** The share of a limit spent, as a bar width that never goes past the end. */
 const barWidth = (spent: number, limit: number) => `${Math.min(100, Math.round((spent / limit) * 100))}%`;
@@ -24,7 +24,11 @@ export function BudgetView() {
   const month = isMonthKey(requested) ? requested : monthKey(now);
   const items = budgetItemsInMonth(state.budgetItems, month);
   const total = sumAmounts(items);
-  const categories = [...state.budgetCategories].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  // Subcategories are counted inside their category. One whose category is gone shows on its own.
+  const topLevel = (parentId?: string) => !parentId || !state.budgetCategories.some((category) => category.id === parentId);
+  const categories = state.budgetCategories
+    .filter((category) => topLevel(category.parentId))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const planned = categories.reduce((sum, category) => sum + (category.monthlyLimit ?? 0), 0);
   const left = planned - total;
 
@@ -61,7 +65,9 @@ export function BudgetView() {
 
         <div className="budget-list">
           {categories.map((category) => {
-            const mine = items.filter((item) => item.categoryId === category.id);
+            const family = categoryFamily(state.budgetCategories, category.id);
+            const subCount = family.length - 1;
+            const mine = items.filter((item) => family.includes(item.categoryId));
             const spent = sumAmounts(mine);
             const limit = category.monthlyLimit;
             return (
@@ -86,6 +92,7 @@ export function BudgetView() {
                   ) : (
                     <small>
                       {mine.length} {mine.length === 1 ? "item" : "items"}
+                      {subCount > 0 && ` · ${subCount} ${subCount === 1 ? "subcategory" : "subcategories"}`}
                     </small>
                   )}
                 </span>

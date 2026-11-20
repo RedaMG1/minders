@@ -59,6 +59,8 @@ export type Task = {
   createdAt: string;
   /** Set when the task is a whole module, so its notes and reminders can be checked from the task. */
   moduleId?: string;
+  /** Highlighted as a must do, and kept at the top of its day. */
+  mustDo?: boolean;
 };
 
 export type BudgetCategory = {
@@ -67,6 +69,8 @@ export type BudgetCategory = {
   color: string;
   /** The most you plan to spend in this category each month, in cents. */
   monthlyLimit?: number;
+  /** Set on a subcategory: the category it sits in. Subcategories don't have their own subcategories. */
+  parentId?: string;
   createdAt: string;
 };
 

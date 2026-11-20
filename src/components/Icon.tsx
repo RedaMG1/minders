@@ -11,6 +11,7 @@ const PATHS = {
   note: <path d="M6 3h9l4 4v14H6zM15 3v4h4M9 12h7M9 16h7" />,
   bell: <path d="M6 16v-5a6 6 0 1 1 12 0v5l2 2H4zM10 21h4" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  bolt: <path d="M13 3L5 13.5h6L10 21l9-11h-6.5z" />,
   search: (
     <>
       <circle cx="11" cy="11" r="7" />

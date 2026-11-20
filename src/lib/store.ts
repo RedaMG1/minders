@@ -350,6 +350,11 @@ export function toggleTask(id: string) {
   );
 }
 
+/** Marks a task as a must do, or clears it. */
+export function toggleMustDo(id: string) {
+  changeTask(id, (task) => ({ ...task, mustDo: !task.mustDo }));
+}
+
 export function moveTask(id: string, day: string, moved: boolean) {
   changeTask(id, (task) => ({ ...task, day, moved, first: false }));
 }
@@ -392,12 +397,21 @@ export function saveBudgetCategory(category: BudgetCategory) {
   }));
 }
 
+/** A category's id plus the ids of its subcategories, so totals and deletes cover them all. */
+export function categoryFamily(categories: BudgetCategory[], id: string) {
+  return [id, ...categories.filter((category) => category.parentId === id).map((category) => category.id)];
+}
+
+/** Deletes a category with its subcategories and every item in them. */
 export function deleteBudgetCategory(id: string) {
-  commit((data) => ({
-    ...data,
-    budgetCategories: data.budgetCategories.filter((category) => category.id !== id),
-    budgetItems: data.budgetItems.filter((item) => item.categoryId !== id),
-  }));
+  commit((data) => {
+    const family = new Set(categoryFamily(data.budgetCategories, id));
+    return {
+      ...data,
+      budgetCategories: data.budgetCategories.filter((category) => !family.has(category.id)),
+      budgetItems: data.budgetItems.filter((item) => !family.has(item.categoryId)),
+    };
+  });
 }
 
 export function saveBudgetItem(item: BudgetItem) {
@@ -412,9 +426,9 @@ export function deleteBudgetItem(id: string) {
 }
 
 /** A month's items, newest date first. */
-export function budgetItemsInMonth(items: BudgetItem[], month: string, categoryId?: string) {
+export function budgetItemsInMonth(items: BudgetItem[], month: string, categoryIds?: string[]) {
   return items
-    .filter((item) => item.date.startsWith(month) && (!categoryId || item.categoryId === categoryId))
+    .filter((item) => item.date.startsWith(month) && (!categoryIds || categoryIds.includes(item.categoryId)))
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 }
 
@@ -446,7 +460,8 @@ export function dismissInstallTip() {
 
 /* Things worked out from the saved data */
 
-const byCreated = (a: Task, b: Task) => Number(b.first) - Number(a.first) || a.createdAt.localeCompare(b.createdAt);
+const byCreated = (a: Task, b: Task) =>
+  Number(b.first) - Number(a.first) || Number(Boolean(b.mustDo)) - Number(Boolean(a.mustDo)) || a.createdAt.localeCompare(b.createdAt);
 
 /** Today's tasks, plus anything from earlier days that is unfinished or was finished today. */
 export function tasksForToday(tasks: Task[], current: Date) {

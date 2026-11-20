@@ -643,3 +643,23 @@ fieldset.field > .chips, fieldset.field > .when, fieldset.field > .pick-row { ma
 .pick-added { font-size: 13px; font-weight: 600; color: var(--module-soft); }
 .first-thing .peek-btn, .first-thing .peek-btn.on { color: inherit; }
 .first-thing .peek-btn.on { border-radius: 12px; background: color-mix(in srgb, currentColor 18%, transparent); }
+
+/* Must do */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.task-row.must-do { margin: 3px -10px; padding-inline: 10px 0; border-bottom-color: transparent; border-radius: 14px; background: color-mix(in srgb, var(--ember) 15%, transparent); box-shadow: inset 3px 0 0 var(--ember); }
+.task-row.must-do .task-text { font-weight: 700; }
+.tag.must-tag { background: var(--ember); color: #fff; }
+.must-btn.on { color: var(--ember); }
+.must-btn.on .i { fill: currentColor; }
+.tag.module-tag { padding-inline: 6px; }
+.backup { flex-wrap: wrap; }
+.backup > div { flex: 1; }
+.backup .all-accounts { flex-basis: 100%; justify-content: center; }
+
+/* Budget subcategories */
+.sub-section { margin-bottom: 14px; }
+.sub-row { padding: 10px 12px 10px 14px; }
+.sub-row > .i { flex: none; color: var(--module-soft); }
+.sub-add { margin-top: 0; }
+.item-sub { display: block; color: var(--ink-soft); font-size: 13px; }
+select.text-field { appearance: auto; }

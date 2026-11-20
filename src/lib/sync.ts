@@ -298,3 +298,20 @@ export function clearQueue() {
   outbox = {};
   saveOutbox();
 }
+
+/** Whether the signed-in account may download every account's data. False when unsure. */
+export async function isMainAccount() {
+  const supabase = getSupabase();
+  if (!supabase) return false;
+  const { data, error } = await supabase.rpc("is_admin");
+  return !error && data === true;
+}
+
+/** Every account with all of its items, for the main account's full backup. */
+export async function fetchAllAccounts() {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("No database");
+  const { data, error } = await supabase.rpc("export_all_accounts");
+  if (error) throw error;
+  return data as unknown[];
+}

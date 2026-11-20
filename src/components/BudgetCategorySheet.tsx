@@ -12,13 +12,19 @@ type BudgetCategorySheetProps = {
   category?: BudgetCategory;
   /** How many items would be deleted along with this category. */
   itemCount?: number;
+  /** How many subcategories would be deleted along with this category. */
+  subCount?: number;
+  /** Set when creating a subcategory inside this category. */
+  parent?: BudgetCategory;
   onClose: () => void;
 };
 
-export function BudgetCategorySheet({ category, itemCount = 0, onClose }: BudgetCategorySheetProps) {
+export function BudgetCategorySheet({ category, itemCount = 0, subCount = 0, parent, onClose }: BudgetCategorySheetProps) {
+  const parentId = category?.parentId ?? parent?.id;
+  const kind = parentId ? "subcategory" : "category";
   const router = useRouter();
   const [name, setName] = useState(category?.name ?? "");
-  const [color, setColor] = useState(category?.color ?? MODULE_COLORS[0].value);
+  const [color, setColor] = useState(category?.color ?? parent?.color ?? MODULE_COLORS[0].value);
   const [limit, setLimit] = useState(category?.monthlyLimit ? centsToInput(category.monthlyLimit) : "");
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -37,6 +43,7 @@ export function BudgetCategorySheet({ category, itemCount = 0, onClose }: Budget
       name: trimmed,
       color,
       monthlyLimit,
+      ...(parentId ? { parentId } : {}),
       createdAt: category?.createdAt ?? new Date().toISOString(),
     });
     onClose();
@@ -45,11 +52,11 @@ export function BudgetCategorySheet({ category, itemCount = 0, onClose }: Budget
   function remove() {
     if (!category) return;
     deleteBudgetCategory(category.id);
-    router.push("/budget");
+    router.push(parentId ? `/budget/category?id=${parentId}` : "/budget");
   }
 
   return (
-    <Sheet title={category ? "Edit category" : "New category"} onClose={onClose} onSubmit={submit}>
+    <Sheet title={`${category ? "Edit" : "New"} ${kind}`} onClose={onClose} onSubmit={submit}>
       <label className="field">
         <span>Name</span>
         <input
@@ -57,7 +64,7 @@ export function BudgetCategorySheet({ category, itemCount = 0, onClose }: Budget
           id="category-name"
           type="text"
           value={name}
-          placeholder="For example Food, Car or Rent"
+          placeholder={parentId ? "For example Groceries or Restaurants" : "For example Food, Car or Rent"}
           maxLength={40}
           onChange={(event) => setName(event.target.value)}
         />
@@ -113,7 +120,7 @@ export function BudgetCategorySheet({ category, itemCount = 0, onClose }: Budget
       )}
 
       <button className="primary" type="submit" disabled={!name.trim()}>
-        {category ? "Save changes" : "Create category"}
+        {category ? "Save changes" : `Create ${kind}`}
       </button>
 
       {category &&
@@ -121,19 +128,20 @@ export function BudgetCategorySheet({ category, itemCount = 0, onClose }: Budget
           <div className="confirm">
             <p>
               Delete {category.name}
+              {subCount > 0 && `, its ${subCount} ${subCount === 1 ? "subcategory" : "subcategories"}`}
               {itemCount > 0 && ` and its ${itemCount} ${itemCount === 1 ? "item" : "items"} from every month`}? You can&apos;t
               undo this.
             </p>
             <button className="danger solid" type="button" onClick={remove}>
-              Delete category
+              Delete {kind}
             </button>
             <button className="ghost" type="button" onClick={() => setConfirming(false)}>
-              Keep category
+              Keep {kind}
             </button>
           </div>
         ) : (
           <button className="danger" type="button" onClick={() => setConfirming(true)}>
-            Delete category
+            Delete {kind}
           </button>
         ))}
     </Sheet>
