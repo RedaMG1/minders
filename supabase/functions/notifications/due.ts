@@ -9,6 +9,8 @@ export type TaskData = {
   done: boolean;
   first?: boolean;
   onHold?: boolean;
+  /** A time on the task's day, as HH:MM, when the phone gets a notification. */
+  remindTime?: string;
   createdAt: string;
 };
 
@@ -81,6 +83,20 @@ export function openTasksFor(tasks: TaskData[], date: string) {
   return tasks
     .filter((task) => !task.done && !task.onHold && task.day <= date)
     .sort((a, b) => Number(Boolean(b.first)) - Number(Boolean(a.first)) || a.createdAt.localeCompare(b.createdAt));
+}
+
+/** Tasks whose time has come on this phone's clock: today, not done or on hold, at most CATCH_UP_MINUTES late. */
+export function taskAlertsDue(tasks: TaskData[], sub: Subscription, now: Date): TaskData[] {
+  const { date, time } = localClock(now, sub.timezone);
+  return tasks.filter((task) => {
+    if (!task.remindTime || task.done || task.onHold || task.day !== date) return false;
+    const late = minutesOf(time) - minutesOf(task.remindTime);
+    return late >= 0 && late <= CATCH_UP_MINUTES;
+  });
+}
+
+export function taskMessage(task: TaskData): Message {
+  return { title: task.title, body: "Planned for now", url: "/today", tag: `minders-task-${task.id}` };
 }
 
 export function digestMessage(tasks: TaskData[]): Message {

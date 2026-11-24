@@ -11,7 +11,9 @@ import {
   reminderMessage,
   reminderTimesDue,
   type Subscription,
+  taskAlertsDue,
   type TaskData,
+  taskMessage,
   testMessage,
 } from "./due.ts";
 
@@ -110,6 +112,26 @@ async function tick(db: SupabaseClient, now: Date) {
       for (const sub of subs.filter((item: Subscription) => item.reminders_enabled && item.user_id === reminder.userId)) {
         if ((await send(sub, reminderMessage(reminder, moduleNames.get(reminder.moduleId)))) === "sent") sent++;
       }
+    }
+  }
+
+  // Task times: each device gets each one once, at that time on its own clock.
+  for (const sub of (subs as Subscription[]).filter((item) => item.reminders_enabled)) {
+    const due = taskAlertsDue(tasksOf(sub.user_id), sub, now);
+    if (!due.length) continue;
+    const key = (task: TaskData) => `task:${task.id}:${task.day}T${task.remindTime}:${sub.endpoint}`;
+    const { data: claimed, error: claimError } = await db
+      .from("push_sent")
+      // The key already holds the task's day and time, so fire_at is a fixed value.
+      .upsert(due.map((task) => ({ item_id: key(task), fire_at: "1970-01-01T00:00:00Z" })), {
+        onConflict: "item_id,fire_at",
+        ignoreDuplicates: true,
+      })
+      .select("item_id");
+    if (claimError) throw claimError;
+    const claimedKeys = new Set((claimed ?? []).map((row) => row.item_id));
+    for (const task of due.filter((item) => claimedKeys.has(key(item)))) {
+      if ((await send(sub, taskMessage(task))) === "sent") sent++;
     }
   }
 

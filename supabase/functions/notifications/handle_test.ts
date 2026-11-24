@@ -173,3 +173,46 @@ Deno.test("sends reminders and the morning summary, once, encrypted for the phon
     await server.shutdown();
   }
 });
+
+Deno.test("sends a task's time to each of the account's phones, once", async () => {
+  const received: { path: string; body: Uint8Array<ArrayBuffer> }[] = [];
+  const server = Deno.serve({ port: 4292, onListen: () => {} }, async (request) => {
+    received.push({ path: new URL(request.url).pathname, body: new Uint8Array(await request.arrayBuffer()) });
+    return new Response(null, { status: 201 });
+  });
+  try {
+    const phone = await makePhone("http://localhost:4292/push/phone");
+    const tablet = await makePhone("http://localhost:4292/push/tablet");
+    const stranger = await makePhone("http://localhost:4292/push/stranger");
+    const sub = (endpoint: string, subscription: unknown, user_id: string) => ({
+      endpoint, subscription, user_id, timezone: "Europe/Paris", digest_time: "08:00",
+      digest_enabled: false, reminders_enabled: true, last_digest_date: null, last_test_at: null,
+    });
+    const tables: Record<string, Row[]> = {
+      push_config: [],
+      push_sent: [],
+      push_subscriptions: [
+        sub(phone.subscription.endpoint, phone.subscription, "me"),
+        sub(tablet.subscription.endpoint, tablet.subscription, "me"),
+        sub(stranger.subscription.endpoint, stranger.subscription, "someone-else"),
+      ],
+      items: [
+        { kind: "task", deleted: false, user_id: "me", data: { id: "t1", title: "Call the bank", day: "2026-11-24", done: false, remindTime: "15:00", createdAt: "2026-11-24T08:00:00Z" } },
+      ],
+    };
+    // deno-lint-ignore no-explicit-any
+    const db = fakeDatabase(tables) as any;
+    const tick = (at: string) => handle(new Request("http://function", { method: "POST", body: JSON.stringify({ action: "tick" }) }), db, new Date(at));
+
+    const first = await (await tick("2026-11-24T14:00:20Z")).json();
+    assertEquals(first.sent, 2, "both of my devices get it");
+    assertEquals(received.map((push) => push.path).sort(), ["/push/phone", "/push/tablet"], "another account's device gets nothing");
+    const message = await phone.read(received.find((push) => push.path === "/push/phone")!.body);
+    assertEquals(message, { title: "Call the bank", body: "Planned for now", url: "/today", tag: "minders-task-t1" });
+
+    const again = await (await tick("2026-11-24T14:01:20Z")).json();
+    assertEquals(again.sent, 0, "nothing is sent twice");
+  } finally {
+    await server.shutdown();
+  }
+});

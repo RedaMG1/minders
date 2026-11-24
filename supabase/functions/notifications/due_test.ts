@@ -5,6 +5,8 @@ import {
   latestOccurrence,
   localClock,
   openTasksFor,
+  taskAlertsDue,
+  taskMessage,
   type ReminderData,
   reminderTimesDue,
   type Subscription,
@@ -90,4 +92,22 @@ Deno.test("weekly and monthly repeats land on the right day", () => {
   assertEquals(latestOccurrence(new Date("2026-10-30T09:00:00Z"), "weekly", new Date("2026-11-13T10:00:00Z"))?.toISOString(), "2026-11-13T09:00:00.000Z");
   assertEquals(latestOccurrence(new Date("2026-01-31T09:00:00Z"), "monthly", new Date("2026-02-28T10:00:00Z"))?.toISOString(), "2026-02-28T09:00:00.000Z");
   assertEquals(latestOccurrence(new Date("2026-12-01T09:00:00Z"), "daily", new Date("2026-11-13T10:00:00Z")), null);
+});
+
+Deno.test("a task time is due at that time on the phone's clock, for the catch-up window only", () => {
+  const paris = sub({ timezone: "Europe/Paris" });
+  const callBank = task("t1", "2026-11-24", false, { remindTime: "15:00" });
+  const due = (at: string, tasks = [callBank], s = paris) => taskAlertsDue(tasks, s, new Date(at)).map((t) => t.id);
+  assertEquals(due("2026-11-24T14:00:00Z"), ["t1"], "15:00 in Paris");
+  assertEquals(due("2026-11-24T14:15:00Z"), ["t1"], "still within catch-up");
+  assertEquals(due("2026-11-24T14:16:00Z"), [], "too late");
+  assertEquals(due("2026-11-24T13:59:00Z"), [], "too early");
+  assertEquals(due("2026-11-24T14:00:00Z", [task("d", "2026-11-24", true, { remindTime: "15:00" })]), [], "done");
+  assertEquals(due("2026-11-24T14:00:00Z", [task("h", "2026-11-24", false, { remindTime: "15:00", onHold: true })]), [], "on hold");
+  assertEquals(due("2026-11-24T14:00:00Z", [task("m", "2026-11-25", false, { remindTime: "15:00" })]), [], "moved to another day");
+  assertEquals(due("2026-11-24T14:00:00Z", [task("n", "2026-11-24")]), [], "no time set");
+  const newYork = sub({ timezone: "America/New_York" });
+  assertEquals(due("2026-11-24T14:00:00Z", [callBank], newYork), [], "09:00 in New York");
+  assertEquals(due("2026-11-24T20:00:00Z", [callBank], newYork), ["t1"], "15:00 in New York");
+  assertEquals(taskMessage(callBank), { title: "t1", body: "Planned for now", url: "/today", tag: "minders-task-t1" });
 });
