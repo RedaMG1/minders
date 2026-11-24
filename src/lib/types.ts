@@ -21,9 +21,13 @@ export type ChecklistItem = {
   done: boolean;
 };
 
-/** A photo in a note. The file lives in the account's own storage folder. */
+/**
+ * A photo in a note. It is its own record, never shared, so other accounts never see it, and their
+ * edits to a shared note can't drop it. The file lives in the account's own storage folder.
+ */
 export type NotePhoto = {
   id: string;
+  noteId: string;
   /** Where the file is stored: <account id>/<note id>/<photo id>.jpg */
   path: string;
   /** The account that added it. Only that account sees it, even in a shared module. */
@@ -42,7 +46,6 @@ export type Note = {
   pinned: boolean;
   /** Checklist items the Randomiser picked, kept until cleared. */
   picked?: string[];
-  photos?: NotePhoto[];
   updatedAt: string;
 };
 
@@ -115,6 +118,8 @@ export type AppState = {
   tasks: Task[];
   budgetCategories: BudgetCategory[];
   budgetItems: BudgetItem[];
+  /** This account's note photos. */
+  photos: NotePhoto[];
   theme: ThemeName;
   brand: string;
   installDismissed: boolean;

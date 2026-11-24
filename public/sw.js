@@ -24,8 +24,11 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Only this app version's cache is searched, never the note photos cache.
+const fromCache = async (request, options) => (await caches.open(CACHE)).match(request, options);
+
 async function cacheFirst(request) {
-  const cached = await caches.match(request);
+  const cached = await fromCache(request);
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok) (await caches.open(CACHE)).put(request, response.clone());
@@ -38,10 +41,10 @@ async function networkFirst(request) {
     if (response.ok) (await caches.open(CACHE)).put(request, response.clone());
     return response;
   } catch (error) {
-    const cached = await caches.match(request, { ignoreSearch: request.mode === "navigate" });
+    const cached = await fromCache(request, { ignoreSearch: request.mode === "navigate" });
     if (cached) return cached;
     if (request.mode === "navigate") {
-      const home = await caches.match("/");
+      const home = await fromCache("/");
       if (home) return home;
     }
     throw error;

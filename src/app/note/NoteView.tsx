@@ -7,12 +7,14 @@ import { AutoTextarea } from "@/components/AutoTextarea";
 import { Icon } from "@/components/Icon";
 import { NotePhotos } from "@/components/NotePhotos";
 import { addDays, clock, dayKey, relativeDay } from "@/lib/dates";
-import { uploadPhoto } from "@/lib/photos";
+import { uploadPhoto, visiblePhotos } from "@/lib/photos";
 import { pickPool, pickRandom } from "@/lib/randomiser";
 import { addNotePhoto, addTask, deleteNote, newId, saveNote, showMessage, useApp } from "@/lib/store";
 import type { ChecklistItem, Note } from "@/lib/types";
 
-function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: string; saved: boolean; now: Date }) {
+type EditorProps = { note: Note; moduleName: string; saved: boolean; now: Date; photoCount: number };
+
+function Editor({ note, moduleName, saved, now, photoCount }: EditorProps) {
   const router = useRouter();
   const [focusItem, setFocusItem] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -41,7 +43,7 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
     for (const file of picked) {
       setUploading((count) => count + 1);
       try {
-        addNotePhoto(note, await uploadPhoto(note.id, file));
+        addNotePhoto(note, saved, await uploadPhoto(note.id, file));
       } catch {
         showMessage("Couldn't add the photo", "Check your internet connection and try again.");
       } finally {
@@ -55,7 +57,7 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
     router.push(`/module?id=${note.moduleId}`);
   }
 
-  const hasContent = Boolean(note.title.trim() || note.body.trim() || note.items.length || note.photos?.length);
+  const hasContent = Boolean(note.title.trim() || note.body.trim() || note.items.length || photoCount);
   // Picks for items that were deleted since are ignored.
   const picked = (note.picked ?? []).filter((id) => note.items.some((item) => item.id === id));
   const poolSize = pickPool(note.items).length;
@@ -249,5 +251,13 @@ export function NoteView() {
     updatedAt: now.toISOString(),
   };
 
-  return <Editor note={note} moduleName={owner.name} saved={Boolean(existing)} now={now} />;
+  return (
+    <Editor
+      note={note}
+      moduleName={owner.name}
+      saved={Boolean(existing)}
+      now={now}
+      photoCount={visiblePhotos(state.photos, note.id).length}
+    />
+  );
 }

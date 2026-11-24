@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { photoUrl, visiblePhotos } from "@/lib/photos";
-import { removeNotePhoto } from "@/lib/store";
+import { removeNotePhoto, useApp } from "@/lib/store";
 import type { Note, NotePhoto } from "@/lib/types";
 import { Icon } from "./Icon";
 import { PhotoViewer } from "./PhotoViewer";
@@ -40,9 +40,10 @@ function Preview({ photo, onOpen, onRemove }: { photo: NotePhoto; onOpen: (src: 
 
 /** The account's own photos in a note, with a placeholder for each one still uploading. */
 export function NotePhotos({ note, uploading }: { note: Note; uploading: number }) {
+  const app = useApp();
   const [viewing, setViewing] = useState<string | null>(null);
   const [removing, setRemoving] = useState<NotePhoto | null>(null);
-  const photos = visiblePhotos(note);
+  const photos = app ? visiblePhotos(app.state.photos, note.id) : [];
   if (!photos.length && !uploading) return null;
 
   return (
@@ -54,7 +55,7 @@ export function NotePhotos({ note, uploading }: { note: Note; uploading: number 
             className="danger solid"
             type="button"
             onClick={() => {
-              removeNotePhoto(note.id, removing);
+              removeNotePhoto(removing);
               setRemoving(null);
             }}
           >

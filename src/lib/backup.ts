@@ -20,6 +20,8 @@ export function buildBackup(state: AppState, now: Date, userId: string | null = 
     notes: state.notes.filter((note) => !othersModules.has(note.moduleId)),
     reminders: state.reminders.filter((reminder) => !othersModules.has(reminder.moduleId)),
     tasks: state.tasks,
+    // The list of this account's photos; the files themselves aren't in the backup.
+    photos: state.photos,
     budgetCategories: state.budgetCategories,
     budgetItems: state.budgetItems,
   };

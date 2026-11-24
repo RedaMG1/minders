@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { addDays, dayKey, nextOccurrence, whenLabel } from "./dates";
 import { DEFAULT_BRAND, DEFAULT_THEME } from "./options";
 import { onAccountChange, signOutOfAccount } from "./auth";
-import { ownPhotoPaths, removePhotoFiles } from "./photos";
+import { forgetPhotosOnDevice, removePhotoFiles } from "./photos";
 import { clearQueue, COLLECTIONS, getSupabase, getSyncStatus, pendingChanges, setSyncAccount, startSync, stopSync, trackChanges, type ItemRow } from "./sync";
 import type { AppState, BudgetCategory, BudgetItem, Module, NotePhoto, NotificationSettings, Note, Reminder, Task, ThemeName, Toast } from "./types";
 
@@ -23,6 +23,7 @@ const EMPTY: AppState = {
   tasks: [],
   budgetCategories: [],
   budgetItems: [],
+  photos: [],
   theme: DEFAULT_THEME,
   brand: DEFAULT_BRAND,
   installDismissed: false,
@@ -196,6 +197,7 @@ function onStorage(event: StorageEvent) {
 function clearDeviceData() {
   const current = getState();
   clearQueue();
+  void forgetPhotosOnDevice();
   save({ ...EMPTY, theme: current.theme, brand: current.brand, installDismissed: current.installDismissed });
   toasts = [];
   notify();
@@ -275,7 +277,8 @@ export function saveModule(module: Module) {
 }
 
 export function deleteModule(id: string) {
-  if (state) void removePhotoFiles(ownPhotoPaths(state.notes.filter((note) => note.moduleId === id)));
+  const notes = new Set(getState().notes.filter((note) => note.moduleId === id).map((note) => note.id));
+  dropPhotos((photo) => notes.has(photo.noteId));
   commit((data) => ({
     ...data,
     modules: data.modules.filter((module) => module.id !== id),
@@ -288,31 +291,48 @@ export function deleteModule(id: string) {
 
 /** Saves a note, or removes it once it has nothing in it, so blank notes never pile up. */
 export function saveNote(note: Note) {
-  const blank =
-    !note.title.trim() && !note.body.trim() && !note.items.some((item) => item.text.trim()) && !note.photos?.length;
+  const empty = !note.title.trim() && !note.body.trim() && !note.items.length;
   const saved = { ...note, updatedAt: new Date().toISOString() };
   commit((data) => {
     const others = data.notes.filter((item) => item.id !== note.id);
-    return { ...data, notes: blank && !note.items.length ? others : [...others, saved] };
+    const hasPhotos = data.photos.some((photo) => photo.noteId === note.id);
+    return { ...data, notes: empty && !hasPhotos ? others : [...others, saved] };
   });
 }
 
-/** Adds an uploaded photo to a note, using the note as it is now. A draft note is saved with it. */
-export function addNotePhoto(draft: Note, photo: NotePhoto) {
-  const current = state?.notes.find((note) => note.id === draft.id) ?? draft;
-  saveNote({ ...current, photos: [...(current.photos ?? []), photo] });
+/**
+ * Adds an uploaded photo to its note. A draft note (never saved) is saved along with it. If the note was
+ * saved but has been deleted since the upload started, the photo is dropped and its file deleted.
+ */
+export function addNotePhoto(draft: Note, wasSaved: boolean, photo: NotePhoto) {
+  const exists = getState().notes.some((note) => note.id === photo.noteId);
+  if (!exists && wasSaved) {
+    void removePhotoFiles([photo.path]);
+    return;
+  }
+  commit((data) => ({
+    ...data,
+    notes: exists ? data.notes : [...data.notes, { ...draft, updatedAt: new Date().toISOString() }],
+    photos: [...data.photos, photo],
+  }));
 }
 
-/** Takes a photo off a note and deletes its file. */
-export function removeNotePhoto(noteId: string, photo: NotePhoto) {
-  const current = state?.notes.find((note) => note.id === noteId);
-  if (!current) return;
-  saveNote({ ...current, photos: (current.photos ?? []).filter((item) => item.id !== photo.id) });
-  void removePhotoFiles([photo.path]);
+/** Takes a photo off its note and deletes its file. */
+export function removeNotePhoto(photo: NotePhoto) {
+  dropPhotos((item) => item.id === photo.id);
+}
+
+/** Removes photo records and deletes their files. */
+function dropPhotos(match: (photo: NotePhoto) => boolean) {
+  const gone = getState().photos.filter(match);
+  if (!gone.length) return;
+  const ids = new Set(gone.map((photo) => photo.id));
+  commit((data) => ({ ...data, photos: data.photos.filter((photo) => !ids.has(photo.id)) }));
+  void removePhotoFiles(gone.map((photo) => photo.path));
 }
 
 export function deleteNote(id: string) {
-  if (state) void removePhotoFiles(ownPhotoPaths(state.notes.filter((note) => note.id === id)));
+  dropPhotos((photo) => photo.noteId === id);
   commit((data) => ({ ...data, notes: data.notes.filter((note) => note.id !== id) }));
 }
 

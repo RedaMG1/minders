@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { AppState, BudgetCategory, BudgetItem, Module, Note, Reminder, Task } from "./types";
+import type { AppState, BudgetCategory, BudgetItem, Module, Note, Reminder, Task, NotePhoto } from "./types";
 
 // The device keeps working on its own copy. Each edit goes into a queue saved on the
 // device, and the queue uploads whenever there is internet, so nothing is lost offline.
@@ -20,8 +20,8 @@ const PAGE_SIZE = 1000;
 /** Fetches a little further back than needed, so a slow upload from another device is never skipped. */
 const CURSOR_OVERLAP_MS = 60 * 1000;
 
-export type Kind = "module" | "note" | "reminder" | "task" | "budget_category" | "budget_item";
-export type SyncedRecord = Module | Note | Reminder | Task | BudgetCategory | BudgetItem;
+export type Kind = "module" | "note" | "reminder" | "task" | "budget_category" | "budget_item" | "photo";
+export type SyncedRecord = Module | Note | Reminder | Task | BudgetCategory | BudgetItem | NotePhoto;
 
 export type ItemRow = {
   id: string;
@@ -43,6 +43,7 @@ export const COLLECTIONS = [
   ["task", "tasks"],
   ["budget_category", "budgetCategories"],
   ["budget_item", "budgetItems"],
+  ["photo", "photos"],
 ] as const;
 
 type SyncHandlers = {
