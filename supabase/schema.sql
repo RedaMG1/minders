@@ -1,7 +1,7 @@
 -- Run this once in the SQL Editor of a new Supabase project.
 create table public.items (
   id text primary key,
-  kind text not null check (kind in ('module', 'note', 'reminder', 'task', 'budget_category', 'budget_item')),
+  kind text not null check (kind in ('module', 'note', 'reminder', 'task', 'budget_category', 'budget_item', 'photo')),
   data jsonb not null default '{}'::jsonb,
   deleted boolean not null default false,
   changed_at timestamptz not null,
@@ -99,7 +99,8 @@ begin
         'reminders', coalesce((select jsonb_agg(i.data order by i.changed_at) from public.items i where i.user_id = u.id and i.kind = 'reminder' and not i.deleted), '[]'),
         'tasks', coalesce((select jsonb_agg(i.data order by i.changed_at) from public.items i where i.user_id = u.id and i.kind = 'task' and not i.deleted), '[]'),
         'budgetCategories', coalesce((select jsonb_agg(i.data order by i.changed_at) from public.items i where i.user_id = u.id and i.kind = 'budget_category' and not i.deleted), '[]'),
-        'budgetItems', coalesce((select jsonb_agg(i.data order by i.changed_at) from public.items i where i.user_id = u.id and i.kind = 'budget_item' and not i.deleted), '[]')
+        'budgetItems', coalesce((select jsonb_agg(i.data order by i.changed_at) from public.items i where i.user_id = u.id and i.kind = 'budget_item' and not i.deleted), '[]'),
+        'photos', coalesce((select jsonb_agg(i.data order by i.changed_at) from public.items i where i.user_id = u.id and i.kind = 'photo' and not i.deleted), '[]')
       )
       order by u.created_at
     )
@@ -112,3 +113,19 @@ revoke execute on function public.is_admin() from public, anon;
 revoke execute on function public.export_all_accounts() from public, anon;
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.export_all_accounts() to authenticated;
+
+-- Photos in notes. See migrations/2026-11-24-note-photos.sql.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('note-photos', 'note-photos', false, 15728640, array['image/jpeg']);
+
+create policy "Accounts open their own note photos" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'note-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+create policy "Accounts add their own note photos" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'note-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+create policy "Accounts delete their own note photos" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'note-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
