@@ -61,6 +61,8 @@ export type Task = {
   moduleId?: string;
   /** Highlighted as a must do, and kept at the top of its day. */
   mustDo?: boolean;
+  /** Paused: kept on its day but not counted as to do. Never true together with done. */
+  onHold?: boolean;
 };
 
 export type BudgetCategory = {

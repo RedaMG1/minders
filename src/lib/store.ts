@@ -346,8 +346,15 @@ export function toggleNoteItem(noteId: string, itemId: string) {
 
 export function toggleTask(id: string) {
   changeTask(id, (task) =>
-    task.done ? { ...task, done: false, doneAt: undefined } : { ...task, done: true, doneAt: new Date().toISOString() },
+    task.done
+      ? { ...task, done: false, doneAt: undefined }
+      : { ...task, done: true, onHold: false, doneAt: new Date().toISOString() },
   );
+}
+
+/** Puts a task on hold, which clears must do and first thing, or puts it back to do. */
+export function toggleOnHold(id: string) {
+  changeTask(id, (task) => (task.onHold ? { ...task, onHold: false } : { ...task, onHold: true, mustDo: false, first: false }));
 }
 
 /** Marks a task as a must do, or clears it. */

@@ -36,8 +36,9 @@ export default function HomePage() {
   if (!app) return <div className="screen" />;
 
   const { state, now } = app;
-  const today = tasksForToday(state.tasks, now);
-  const tomorrow = tasksForTomorrow(state.tasks, now);
+  // Tasks on hold don't count as planned.
+  const today = tasksForToday(state.tasks, now).filter((task) => !task.onHold);
+  const tomorrow = tasksForTomorrow(state.tasks, now).filter((task) => !task.onHold);
   const upcoming = upcomingReminders(state.reminders);
   const nextToday = upcoming.find((reminder) => dayKey(new Date(reminder.at)) === dayKey(now));
   const firstTomorrow = tomorrow.find((task) => task.first) ?? tomorrow[0];

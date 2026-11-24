@@ -48,7 +48,8 @@ export default function TomorrowPage() {
   const tomorrow = addDays(now, 1);
   const tasks = tasksForTomorrow(state.tasks, now);
   const first = tasks.find((task) => task.first);
-  const others = tasks.filter((task) => !task.first);
+  const others = tasks.filter((task) => !task.first && !task.onHold);
+  const onHold = tasks.filter((task) => task.onHold && !task.done);
 
   return (
     <div className="screen night">
@@ -106,6 +107,11 @@ export default function TomorrowPage() {
               </>
             }
           />
+        ))}
+
+        {onHold.length > 0 && <p className="section-label">On hold</p>}
+        {onHold.map((task) => (
+          <TaskRow key={task.id} task={task} />
         ))}
 
         <button className="move-all" type="button" onClick={() => setPicking(true)}>

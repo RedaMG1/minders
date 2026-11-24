@@ -663,3 +663,10 @@ fieldset.field > .chips, fieldset.field > .when, fieldset.field > .pick-row { ma
 .sub-add { margin-top: 0; }
 .item-sub { display: block; color: var(--ink-soft); font-size: 13px; }
 select.text-field { appearance: auto; }
+
+/* On hold */
+.task-row .row-btn { width: 36px; }
+.task-row.on-hold .task { opacity: 0.6; }
+.task-row.on-hold .task-text { font-style: italic; }
+.tag.hold-tag { background: var(--line); color: var(--fg); }
+.hold-btn.on { color: var(--accent-deep); }

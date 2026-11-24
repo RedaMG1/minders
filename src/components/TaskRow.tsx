@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { deleteTask, toggleMustDo, toggleTask, useApp } from "@/lib/store";
+import { deleteTask, toggleMustDo, toggleOnHold, toggleTask, useApp } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { Icon } from "./Icon";
 import { ModulePeek } from "./ModulePeek";
@@ -23,14 +23,25 @@ export function useTaskTitle(task: Task) {
 export function TaskRow({ task, tag, actions }: TaskRowProps) {
   const [open, setOpen] = useState(false);
   const title = useTaskTitle(task);
+  const onHold = Boolean(task.onHold) && !task.done;
 
   return (
-    <div className={["task-row", task.moduleId && "module-task", task.mustDo && !task.done && "must-do"].filter(Boolean).join(" ")}>
+    <div
+      className={["task-row", task.moduleId && "module-task", task.mustDo && !task.done && !onHold && "must-do", onHold && "on-hold"]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <label className="task">
         <input type="checkbox" id={`task-${task.id}`} checked={task.done} onChange={() => toggleTask(task.id)} />
         <span className="task-body">
           <span className="task-text">{title}</span>
-          {task.mustDo && !task.done && (
+          {onHold && (
+            <span className="tag hold-tag">
+              <Icon name="pause" small />
+              On hold
+            </span>
+          )}
+          {task.mustDo && !task.done && !onHold && (
             <span className="tag must-tag">
               <Icon name="bolt" small />
               Must do
@@ -48,6 +59,17 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
       {task.moduleId && <PeekButton title={title} open={open} onToggle={() => setOpen(!open)} />}
       {!task.done && (
         <button
+          className={onHold ? "row-btn hold-btn on" : "row-btn hold-btn"}
+          type="button"
+          aria-label={onHold ? `Resume ${title}` : `Put ${title} on hold`}
+          aria-pressed={onHold}
+          onClick={() => toggleOnHold(task.id)}
+        >
+          <Icon name="pause" />
+        </button>
+      )}
+      {!task.done && !onHold && (
+        <button
           className={task.mustDo ? "row-btn must-btn on" : "row-btn must-btn"}
           type="button"
           aria-label={task.mustDo ? `${title} is a must do. Tap to clear` : `Mark ${title} as a must do`}
@@ -57,7 +79,7 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
           <Icon name="bolt" />
         </button>
       )}
-      {actions}
+      {!onHold && actions}
       <button className="row-btn" type="button" aria-label={`Delete ${title}`} onClick={() => deleteTask(task.id)}>
         <Icon name="x" />
       </button>

@@ -60,6 +60,11 @@ Deno.test("summary lists open tasks for today and carried over ones", () => {
   assertEquals(digestMessage([open[0]]).title, "Today: 1 task");
 });
 
+Deno.test("tasks on hold are left out of the morning summary", () => {
+  const tasks = [task("paused", "2026-11-12", false, { onHold: true }), task("open", "2026-11-13")];
+  assertEquals(openTasksFor(tasks, "2026-11-13").map((t) => t.id), ["open"]);
+});
+
 Deno.test("a one-time reminder is due at its time and for the catch-up window only", () => {
   const r = reminder({});
   assertEquals(reminderTimesDue(r, new Date("2026-11-13T08:59:59Z")), []);

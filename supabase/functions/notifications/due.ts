@@ -8,6 +8,7 @@ export type TaskData = {
   day: string;
   done: boolean;
   first?: boolean;
+  onHold?: boolean;
   createdAt: string;
 };
 
@@ -78,7 +79,7 @@ export function digestDue(sub: Subscription, now: Date) {
 /** What is still to do on a local date: that day's open tasks, plus open tasks from earlier days. */
 export function openTasksFor(tasks: TaskData[], date: string) {
   return tasks
-    .filter((task) => !task.done && task.day <= date)
+    .filter((task) => !task.done && !task.onHold && task.day <= date)
     .sort((a, b) => Number(Boolean(b.first)) - Number(Boolean(a.first)) || a.createdAt.localeCompare(b.createdAt));
 }
 

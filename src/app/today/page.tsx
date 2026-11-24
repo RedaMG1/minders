@@ -17,7 +17,8 @@ export default function TodayPage() {
   const todayKey = dayKey(now);
   const tomorrowKey = dayKey(addDays(now, 1));
   const tasks = tasksForToday(state.tasks, now);
-  const todo = tasks.filter((task) => !task.done);
+  const todo = tasks.filter((task) => !task.done && !task.onHold);
+  const onHold = tasks.filter((task) => !task.done && task.onHold);
   const done = tasks.filter((task) => task.done);
   const rows = todaysReminderRows(state.reminders, now);
   const next = rows.find((row) => !row.sent);
@@ -36,7 +37,7 @@ export default function TodayPage() {
             History
           </Link>
         </div>
-        <SunArc rows={rows} now={now} done={done.length} total={tasks.length} />
+        <SunArc rows={rows} now={now} done={done.length} total={todo.length + done.length} />
       </div>
 
       <div className="today-sheet">
@@ -58,7 +59,7 @@ export default function TodayPage() {
           <p className="section-label">To do</p>
           {todo.length === 0 && (
             <p className="empty">
-              <b>{tasks.length ? "All done for today" : "Nothing planned for today"}</b>
+              <b>{todo.length + done.length ? "All done for today" : "Nothing planned for today"}</b>
               Add something in the box below.
             </p>
           )}
@@ -96,6 +97,11 @@ export default function TodayPage() {
               Move all {todo.length} unfinished to tomorrow
             </button>
           )}
+
+          {onHold.length > 0 && <p className="section-label">On hold</p>}
+          {onHold.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
 
           {done.length > 0 && <p className="section-label">Done</p>}
           {done.map((task) => (
