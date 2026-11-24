@@ -1,5 +1,5 @@
 // Keeps the app working offline. Bump VERSION to drop the old caches after a change here.
-const VERSION = "v5";
+const VERSION = "v6";
 const CACHE = `minders-${VERSION}`;
 const PAGES = ["/", "/today", "/tomorrow", "/reminders", "/theme", "/history", "/budget", "/budget/category", "/notifications", "/module", "/note", "/search"];
 const FILES = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
@@ -18,7 +18,8 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      // Saved note photos live in their own cache and are kept across updates.
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE && key !== "minders-photos").map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   );
 });

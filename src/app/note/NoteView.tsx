@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { AutoTextarea } from "@/components/AutoTextarea";
 import { Icon } from "@/components/Icon";
+import { NotePhotos } from "@/components/NotePhotos";
 import { addDays, clock, dayKey, relativeDay } from "@/lib/dates";
+import { uploadPhoto } from "@/lib/photos";
 import { pickPool, pickRandom } from "@/lib/randomiser";
-import { addTask, deleteNote, newId, saveNote, showMessage, useApp } from "@/lib/store";
+import { addNotePhoto, addTask, deleteNote, newId, saveNote, showMessage, useApp } from "@/lib/store";
 import type { ChecklistItem, Note } from "@/lib/types";
 
 function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: string; saved: boolean; now: Date }) {
   const router = useRouter();
   const [focusItem, setFocusItem] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [uploading, setUploading] = useState(0);
+  const photoInput = useRef<HTMLInputElement>(null);
 
   const update = (change: Partial<Note>) => saveNote({ ...note, ...change });
   const updateItem = (id: string, change: Partial<ChecklistItem>) =>
@@ -31,12 +35,27 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
     showMessage("Added to tomorrow", title);
   }
 
+  async function addPhotos(event: ChangeEvent<HTMLInputElement>) {
+    const picked = [...(event.target.files ?? [])];
+    event.target.value = "";
+    for (const file of picked) {
+      setUploading((count) => count + 1);
+      try {
+        addNotePhoto(note, await uploadPhoto(note.id, file));
+      } catch {
+        showMessage("Couldn't add the photo", "Check your internet connection and try again.");
+      } finally {
+        setUploading((count) => count - 1);
+      }
+    }
+  }
+
   function remove() {
     deleteNote(note.id);
     router.push(`/module?id=${note.moduleId}`);
   }
 
-  const hasContent = Boolean(note.title.trim() || note.body.trim() || note.items.length);
+  const hasContent = Boolean(note.title.trim() || note.body.trim() || note.items.length || note.photos?.length);
   // Picks for items that were deleted since are ignored.
   const picked = (note.picked ?? []).filter((id) => note.items.some((item) => item.id === id));
   const poolSize = pickPool(note.items).length;
@@ -106,6 +125,7 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
           value={note.body}
           onChange={(event) => update({ body: event.target.value })}
         />
+        <NotePhotos note={note} uploading={uploading} />
         {note.items.length > 0 && (
           <div>
             {note.items.map((item) => (
@@ -179,6 +199,10 @@ function Editor({ note, moduleName, saved, now }: { note: Note; moduleName: stri
         <button className="icon-btn plain" type="button" aria-label="Add a list item" onClick={addItem}>
           <Icon name="list" />
         </button>
+        <button className="icon-btn plain" type="button" aria-label="Add a photo" onClick={() => photoInput.current?.click()}>
+          <Icon name="camera" />
+        </button>
+        <input ref={photoInput} id="photo-input" type="file" accept="image/*" multiple hidden onChange={addPhotos} />
         <button className="send" type="button" disabled={!hasContent} onClick={addToTomorrow}>
           <Icon name="moon" small />
           Add to tomorrow

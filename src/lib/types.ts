@@ -21,6 +21,18 @@ export type ChecklistItem = {
   done: boolean;
 };
 
+/** A photo in a note. The file lives in the account's own storage folder. */
+export type NotePhoto = {
+  id: string;
+  /** Where the file is stored: <account id>/<note id>/<photo id>.jpg */
+  path: string;
+  /** The account that added it. Only that account sees it, even in a shared module. */
+  ownerId: string;
+  width: number;
+  height: number;
+  addedAt: string;
+};
+
 export type Note = {
   id: string;
   moduleId: string;
@@ -30,6 +42,7 @@ export type Note = {
   pinned: boolean;
   /** Checklist items the Randomiser picked, kept until cleared. */
   picked?: string[];
+  photos?: NotePhoto[];
   updatedAt: string;
 };
 

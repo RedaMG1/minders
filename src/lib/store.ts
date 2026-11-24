@@ -2,8 +2,9 @@ import { useSyncExternalStore } from "react";
 import { addDays, dayKey, nextOccurrence, whenLabel } from "./dates";
 import { DEFAULT_BRAND, DEFAULT_THEME } from "./options";
 import { onAccountChange, signOutOfAccount } from "./auth";
+import { ownPhotoPaths, removePhotoFiles } from "./photos";
 import { clearQueue, COLLECTIONS, getSupabase, getSyncStatus, pendingChanges, setSyncAccount, startSync, stopSync, trackChanges, type ItemRow } from "./sync";
-import type { AppState, BudgetCategory, BudgetItem, Module, NotificationSettings, Note, Reminder, Task, ThemeName, Toast } from "./types";
+import type { AppState, BudgetCategory, BudgetItem, Module, NotePhoto, NotificationSettings, Note, Reminder, Task, ThemeName, Toast } from "./types";
 
 // Screens read and change the copy saved on this device, so they work with no internet.
 // sync.ts keeps that copy in step with the database.
@@ -274,6 +275,7 @@ export function saveModule(module: Module) {
 }
 
 export function deleteModule(id: string) {
+  if (state) void removePhotoFiles(ownPhotoPaths(state.notes.filter((note) => note.moduleId === id)));
   commit((data) => ({
     ...data,
     modules: data.modules.filter((module) => module.id !== id),
@@ -286,7 +288,8 @@ export function deleteModule(id: string) {
 
 /** Saves a note, or removes it once it has nothing in it, so blank notes never pile up. */
 export function saveNote(note: Note) {
-  const blank = !note.title.trim() && !note.body.trim() && !note.items.some((item) => item.text.trim());
+  const blank =
+    !note.title.trim() && !note.body.trim() && !note.items.some((item) => item.text.trim()) && !note.photos?.length;
   const saved = { ...note, updatedAt: new Date().toISOString() };
   commit((data) => {
     const others = data.notes.filter((item) => item.id !== note.id);
@@ -294,7 +297,22 @@ export function saveNote(note: Note) {
   });
 }
 
+/** Adds an uploaded photo to a note, using the note as it is now. A draft note is saved with it. */
+export function addNotePhoto(draft: Note, photo: NotePhoto) {
+  const current = state?.notes.find((note) => note.id === draft.id) ?? draft;
+  saveNote({ ...current, photos: [...(current.photos ?? []), photo] });
+}
+
+/** Takes a photo off a note and deletes its file. */
+export function removeNotePhoto(noteId: string, photo: NotePhoto) {
+  const current = state?.notes.find((note) => note.id === noteId);
+  if (!current) return;
+  saveNote({ ...current, photos: (current.photos ?? []).filter((item) => item.id !== photo.id) });
+  void removePhotoFiles([photo.path]);
+}
+
 export function deleteNote(id: string) {
+  if (state) void removePhotoFiles(ownPhotoPaths(state.notes.filter((note) => note.id === id)));
   commit((data) => ({ ...data, notes: data.notes.filter((note) => note.id !== id) }));
 }
 
