@@ -16,17 +16,25 @@ function fakeDatabase(tables: Record<string, Row[]>) {
     private payload: Row[] | Row = [];
     private options: { onConflict?: string; ignoreDuplicates?: boolean } = {};
     private oneRow = false;
+    // Like the real API, a select returns at most 1000 rows unless a range asks for others.
+    private window: [number, number] = [0, 999];
     constructor(private table: string) {
       tables[table] ??= [];
     }
     select() { return this; }
     eq(column: string, value: unknown) { this.filters.push((row) => row[column] === value); return this; }
     in(column: string, values: unknown[]) { this.filters.push((row) => values.includes(row[column])); return this; }
+    range(from: number, to: number) { this.window = [from, to]; return this; }
+    order() { return this; }
     or(expression: string) {
+      const read = (row: Row, column: string) =>
+        column.includes("->>") ? String((row[column.split("->>")[0]] as Row)?.[column.split("->>")[1]] ?? "") : row[column];
       const tests = expression.split(",").map((part) => {
         const [column, operator, ...rest] = part.split(".");
         const value = rest.join(".");
-        return (row: Row) => (operator === "is" ? row[column] == null : row[column] !== value);
+        if (operator === "is") return (row: Row) => read(row, column) == null;
+        if (operator === "eq") return (row: Row) => String(read(row, column)) === value;
+        return (row: Row) => read(row, column) !== value;
       });
       this.filters.push((row) => tests.some((test) => test(row)));
       return this;
@@ -43,7 +51,7 @@ function fakeDatabase(tables: Record<string, Row[]>) {
     private run() {
       const rows = tables[this.table];
       let data: Row[] = [];
-      if (this.action === "select") data = this.matches();
+      if (this.action === "select") data = this.matches().slice(this.window[0], this.window[1] + 1);
       if (this.action === "update") data = this.matches().map((row) => Object.assign(row, this.payload));
       if (this.action === "delete") {
         data = this.matches();
@@ -212,6 +220,44 @@ Deno.test("sends a task's time to each of the account's phones, once", async () 
 
     const again = await (await tick("2026-11-24T14:01:20Z")).json();
     assertEquals(again.sent, 0, "nothing is sent twice");
+  } finally {
+    await server.shutdown();
+  }
+});
+
+Deno.test("task times still go out with thousands of rows and one phone with a broken time zone", async () => {
+  const received: string[] = [];
+  const server = Deno.serve({ port: 4293, onListen: () => {} }, async (request) => {
+    received.push(new URL(request.url).pathname);
+    await request.arrayBuffer();
+    return new Response(null, { status: 201 });
+  });
+  try {
+    const broken = await makePhone("http://localhost:4293/push/broken");
+    const phone = await makePhone("http://localhost:4293/push/phone");
+    const sub = (endpoint: string, subscription: unknown, timezone: string) => ({
+      endpoint, subscription, user_id: "me", timezone, digest_time: "08:00",
+      digest_enabled: true, reminders_enabled: true, last_digest_date: null, last_test_at: null,
+    });
+    // 1200 finished tasks come first, the way History keeps them.
+    const done = Array.from({ length: 1200 }, (_, i) => ({
+      kind: "task", deleted: false, user_id: "me",
+      data: { id: `old${i}`, title: `Old ${i}`, day: "2026-10-01", done: true, createdAt: "2026-10-01T08:00:00Z" },
+    }));
+    const tables: Record<string, Row[]> = {
+      push_config: [],
+      push_sent: [],
+      push_subscriptions: [sub(broken.subscription.endpoint, broken.subscription, "Not/AZone"), sub(phone.subscription.endpoint, phone.subscription, "Europe/Paris")],
+      items: [
+        ...done,
+        { kind: "task", deleted: false, user_id: "me", data: { id: "t1", title: "Call the bank", day: "2026-11-24", done: false, remindTime: "15:00", createdAt: "2026-11-24T08:00:00Z" } },
+      ],
+    };
+    // deno-lint-ignore no-explicit-any
+    const db = fakeDatabase(tables) as any;
+    const response = await handle(new Request("http://function", { method: "POST", body: JSON.stringify({ action: "tick" }) }), db, new Date("2026-11-24T14:00:20Z"));
+    assertEquals(response.status, 200, "one broken phone doesn't stop the run");
+    assertEquals(received, ["/push/phone"], "the task past the first 1000 rows still reaches the working phone");
   } finally {
     await server.shutdown();
   }

@@ -687,3 +687,8 @@ select.text-field { appearance: auto; }
 .tag.time-tag { background: color-mix(in srgb, var(--accent-deep) 16%, transparent); color: var(--fg); }
 .time-btn.on { color: var(--accent-deep); }
 .sheet-hint { color: var(--ink-soft); font-size: 15px; overflow-wrap: anywhere; }
+
+/* When a row is short of room, its buttons move to a second line so the task's words stay readable. */
+.task-row { flex-wrap: wrap; }
+.task-row > .task { flex: 1 1 180px; }
+.task-actions { display: flex; flex: none; align-items: center; gap: 2px; margin-left: auto; }

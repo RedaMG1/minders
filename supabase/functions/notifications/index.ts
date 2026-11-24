@@ -22,6 +22,8 @@ const CONTACT = "https://minders-r7k2q9x.pages.dev";
 const TEST_COOLDOWN_SECONDS = 20;
 /** How long a push service keeps trying to deliver to a phone that is off. */
 const TTL_SECONDS = 60 * 60 * 4;
+/** The API returns at most this many rows per request, so items are read a page at a time. */
+const PAGE_SIZE = 1000;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -75,24 +77,39 @@ async function makeSender(db: SupabaseClient): Promise<Sender> {
   };
 }
 
+type ItemRow = { kind: string; data: Record<string, unknown>; user_id: string };
+
+/** Every account's modules, reminders and unfinished tasks. Finished tasks, kept for History, are left out. */
+async function activeItems(db: SupabaseClient) {
+  const rows: ItemRow[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await db
+      .from("items")
+      .select("id, kind, data, user_id")
+      .in("kind", ["task", "reminder", "module"])
+      .eq("deleted", false)
+      .or("kind.neq.task,data->>done.eq.false")
+      .order("id")
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...((data ?? []) as ItemRow[]));
+    if (!data || data.length < PAGE_SIZE) return rows;
+  }
+}
+
 async function tick(db: SupabaseClient, now: Date) {
   const { data: subs, error } = await db.from("push_subscriptions").select("*");
   if (error) throw error;
   if (!subs?.length) return { subscriptions: 0, sent: 0 };
 
-  const { data: rows, error: itemsError } = await db
-    .from("items")
-    .select("kind, data, user_id")
-    .in("kind", ["task", "reminder", "module"])
-    .eq("deleted", false);
-  if (itemsError) throw itemsError;
+  const rows = await activeItems(db);
 
   // Each device only ever gets its own account's tasks and reminders.
   const tasksOf = (userId: string) => rows.filter((row) => row.kind === "task" && row.user_id === userId).map((row) => row.data as TaskData);
   const reminders = rows
     .filter((row) => row.kind === "reminder")
     .map((row) => ({ ...(row.data as ReminderData), userId: row.user_id as string }));
-  const moduleNames = new Map(rows.filter((row) => row.kind === "module").map((row) => [row.data.id, row.data.name]));
+  const moduleNames = new Map(rows.filter((row) => row.kind === "module").map((row) => [row.data.id as string, row.data.name as string]));
   const send = await makeSender(db);
   let sent = 0;
 
@@ -117,37 +134,47 @@ async function tick(db: SupabaseClient, now: Date) {
 
   // Task times: each device gets each one once, at that time on its own clock.
   for (const sub of (subs as Subscription[]).filter((item) => item.reminders_enabled)) {
-    const due = taskAlertsDue(tasksOf(sub.user_id), sub, now);
-    if (!due.length) continue;
-    const key = (task: TaskData) => `task:${task.id}:${task.day}T${task.remindTime}:${sub.endpoint}`;
-    const { data: claimed, error: claimError } = await db
-      .from("push_sent")
-      // The key already holds the task's day and time, so fire_at is a fixed value.
-      .upsert(due.map((task) => ({ item_id: key(task), fire_at: "1970-01-01T00:00:00Z" })), {
-        onConflict: "item_id,fire_at",
-        ignoreDuplicates: true,
-      })
-      .select("item_id");
-    if (claimError) throw claimError;
-    const claimedKeys = new Set((claimed ?? []).map((row) => row.item_id));
-    for (const task of due.filter((item) => claimedKeys.has(key(item)))) {
-      if ((await send(sub, taskMessage(task))) === "sent") sent++;
+    // One device with a broken setting, like an unknown time zone, never stops the others.
+    try {
+      const due = taskAlertsDue(tasksOf(sub.user_id), sub, now);
+      if (!due.length) continue;
+      const key = (task: TaskData) => `task:${task.id}:${task.day}T${task.remindTime}:${sub.endpoint}`;
+      const { data: claimed, error: claimError } = await db
+        .from("push_sent")
+        // The key already holds the task's day and time, so fire_at is a fixed value.
+        .upsert(due.map((task) => ({ item_id: key(task), fire_at: "1970-01-01T00:00:00Z" })), {
+          onConflict: "item_id,fire_at",
+          ignoreDuplicates: true,
+        })
+        .select("item_id");
+      if (claimError) throw claimError;
+      const claimedKeys = new Set((claimed ?? []).map((row) => row.item_id));
+      for (const task of due.filter((item) => claimedKeys.has(key(item)))) {
+        if ((await send(sub, taskMessage(task))) === "sent") sent++;
+      }
+    } catch (error) {
+      console.error("task times failed for one device", String(error));
     }
   }
 
   // Morning summary, once per device per local day.
   for (const sub of subs as Subscription[]) {
-    const date = digestDue(sub, now);
-    if (!date) continue;
-    const { data: claimed } = await db
-      .from("push_subscriptions")
-      .update({ last_digest_date: date })
-      .eq("endpoint", sub.endpoint)
-      .or(`last_digest_date.is.null,last_digest_date.neq.${date}`)
-      .select("endpoint");
-    if (!claimed?.length) continue;
-    const open = openTasksFor(tasksOf(sub.user_id), date);
-    if (open.length && (await send(sub, digestMessage(open))) === "sent") sent++;
+    // One device with a broken setting, like an unknown time zone, never stops the others.
+    try {
+      const date = digestDue(sub, now);
+      if (!date) continue;
+      const { data: claimed } = await db
+        .from("push_subscriptions")
+        .update({ last_digest_date: date })
+        .eq("endpoint", sub.endpoint)
+        .or(`last_digest_date.is.null,last_digest_date.neq.${date}`)
+        .select("endpoint");
+      if (!claimed?.length) continue;
+      const open = openTasksFor(tasksOf(sub.user_id), date);
+      if (open.length && (await send(sub, digestMessage(open))) === "sent") sent++;
+    } catch (error) {
+      console.error("morning summary failed for one device", String(error));
+    }
   }
 
   return { subscriptions: subs.length, sent };

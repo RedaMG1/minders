@@ -65,43 +65,46 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
           {tag && <span className="tag carried">{tag}</span>}
         </span>
       </label>
-      {task.moduleId && <PeekButton title={title} open={open} onToggle={() => setOpen(!open)} />}
-      {canTime && (
-        <button
-          className={task.remindTime ? "row-btn time-btn on" : "row-btn time-btn"}
-          type="button"
-          aria-label={task.remindTime ? `Change the time for ${title}` : `Set a time for ${title}`}
-          onClick={() => setTiming(true)}
-        >
-          <Icon name="bell" />
+      {/* The buttons stay together, and move under the task as a group when the row is short of room. */}
+      <span className="task-actions">
+        {task.moduleId && <PeekButton title={title} open={open} onToggle={() => setOpen(!open)} />}
+        {canTime && (
+          <button
+            className={task.remindTime ? "row-btn time-btn on" : "row-btn time-btn"}
+            type="button"
+            aria-label={task.remindTime ? `Change the time for ${title}` : `Set a time for ${title}`}
+            onClick={() => setTiming(true)}
+          >
+            <Icon name="bell" />
+          </button>
+        )}
+        {!task.done && (
+          <button
+            className={onHold ? "row-btn hold-btn on" : "row-btn hold-btn"}
+            type="button"
+            aria-label={onHold ? `Resume ${title}` : `Put ${title} on hold`}
+            aria-pressed={onHold}
+            onClick={() => toggleOnHold(task.id)}
+          >
+            <Icon name="pause" />
+          </button>
+        )}
+        {!task.done && !onHold && (
+          <button
+            className={task.mustDo ? "row-btn must-btn on" : "row-btn must-btn"}
+            type="button"
+            aria-label={task.mustDo ? `${title} is a must do. Tap to clear` : `Mark ${title} as a must do`}
+            aria-pressed={Boolean(task.mustDo)}
+            onClick={() => toggleMustDo(task.id)}
+          >
+            <Icon name="bolt" />
+          </button>
+        )}
+        {!onHold && actions}
+        <button className="row-btn" type="button" aria-label={`Delete ${title}`} onClick={() => deleteTask(task.id)}>
+          <Icon name="x" />
         </button>
-      )}
-      {!task.done && (
-        <button
-          className={onHold ? "row-btn hold-btn on" : "row-btn hold-btn"}
-          type="button"
-          aria-label={onHold ? `Resume ${title}` : `Put ${title} on hold`}
-          aria-pressed={onHold}
-          onClick={() => toggleOnHold(task.id)}
-        >
-          <Icon name="pause" />
-        </button>
-      )}
-      {!task.done && !onHold && (
-        <button
-          className={task.mustDo ? "row-btn must-btn on" : "row-btn must-btn"}
-          type="button"
-          aria-label={task.mustDo ? `${title} is a must do. Tap to clear` : `Mark ${title} as a must do`}
-          aria-pressed={Boolean(task.mustDo)}
-          onClick={() => toggleMustDo(task.id)}
-        >
-          <Icon name="bolt" />
-        </button>
-      )}
-      {!onHold && actions}
-      <button className="row-btn" type="button" aria-label={`Delete ${title}`} onClick={() => deleteTask(task.id)}>
-        <Icon name="x" />
-      </button>
+      </span>
       {task.moduleId && open && <ModulePeek moduleId={task.moduleId} />}
       {timing && <TaskTimeSheet task={task} title={title} onClose={() => setTiming(false)} />}
     </div>

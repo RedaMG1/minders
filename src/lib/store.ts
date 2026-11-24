@@ -422,10 +422,14 @@ export function toggleTask(id: string) {
   );
 }
 
-/** Sets the time a task notifies at on its day, as HH:MM, or clears it with null. */
+/**
+ * Sets the time a task notifies at on its day, as HH:MM, or clears it with null. A task carried over
+ * from an earlier day moves to today, since that's the day the time is for.
+ */
 export function setTaskTime(id: string, time: string | null) {
+  const today = dayKey(new Date());
   changeTask(id, (task) => {
-    if (time) return { ...task, remindTime: time };
+    if (time) return { ...task, remindTime: time, ...(task.day < today ? { day: today } : {}) };
     const cleared = { ...task };
     delete cleared.remindTime;
     return cleared;
