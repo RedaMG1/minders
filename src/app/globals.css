@@ -682,3 +682,8 @@ select.text-field { appearance: auto; }
 .photo-viewer { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: max(var(--safe-top, 0px), 16px) 16px max(var(--safe-bottom, 0px), 16px); background: rgba(0, 0, 0, 0.92); }
 .photo-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
 .viewer-close { position: absolute; top: max(var(--safe-top, 0px), 16px); right: 16px; background: rgba(255, 255, 255, 0.16); color: #fff; }
+
+/* Task times */
+.tag.time-tag { background: color-mix(in srgb, var(--accent-deep) 16%, transparent); color: var(--fg); }
+.time-btn.on { color: var(--accent-deep); }
+.sheet-hint { color: var(--ink-soft); font-size: 15px; overflow-wrap: anywhere; }

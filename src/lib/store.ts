@@ -177,10 +177,42 @@ function fireDueReminders(current: Date) {
   });
 }
 
+/** Task times already shown on this device, so each shows once. */
+const TASK_ALERTS_KEY = "minders-task-alerts";
+const TASK_ALERT_WINDOW_MINUTES = 15;
+
+/** Shows task times that have come due, inside the open app. The phone notification comes from the server. */
+function fireDueTaskTimes(current: Date) {
+  const today = dayKey(current);
+  const minutesNow = current.getHours() * 60 + current.getMinutes();
+  const due = getState().tasks.filter((task) => {
+    if (!task.remindTime || task.done || task.onHold || task.day !== today) return false;
+    const [hours, minutes] = task.remindTime.split(":").map(Number);
+    const late = minutesNow - (hours * 60 + minutes);
+    return late >= 0 && late <= TASK_ALERT_WINDOW_MINUTES;
+  });
+  if (!due.length) return;
+  let shown: string[] = [];
+  try {
+    shown = JSON.parse(localStorage.getItem(TASK_ALERTS_KEY) || "[]");
+  } catch {}
+  const fresh = due.filter((task) => !shown.includes(`${task.id}@${task.day}T${task.remindTime}`));
+  if (!fresh.length) return;
+  // Only today's keys are worth keeping.
+  const kept = [...shown.filter((item) => item.includes(`@${today}T`)), ...fresh.map((task) => `${task.id}@${task.day}T${task.remindTime}`)];
+  try {
+    localStorage.setItem(TASK_ALERTS_KEY, JSON.stringify(kept));
+  } catch {}
+  fresh.forEach((task) => pushToast({ title: task.title, detail: "Planned for now", kind: "reminder" }));
+}
+
 function tick() {
   const current = new Date();
   // Reminders wait until someone signs in, so the sign-in screen never shows anyone's data.
-  if (dataIsOpen()) fireDueReminders(current);
+  if (dataIsOpen()) {
+    fireDueReminders(current);
+    fireDueTaskTimes(current);
+  }
   if (!now || now.getMinutes() !== current.getMinutes() || now.getHours() !== current.getHours()) {
     now = current;
     notify();
@@ -388,6 +420,17 @@ export function toggleTask(id: string) {
       ? { ...task, done: false, doneAt: undefined }
       : { ...task, done: true, onHold: false, doneAt: new Date().toISOString() },
   );
+}
+
+/** Sets the time a task notifies at on its day, as HH:MM, or clears it with null. */
+export function setTaskTime(id: string, time: string | null) {
+  changeTask(id, (task) => {
+    if (time) return { ...task, remindTime: time };
+    const cleared = { ...task };
+    delete cleared.remindTime;
+    return cleared;
+  });
+  tick();
 }
 
 /** Puts a task on hold, which clears must do and first thing, or puts it back to do. */

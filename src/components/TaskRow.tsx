@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { deleteTask, toggleMustDo, toggleOnHold, toggleTask, useApp } from "@/lib/store";
+import { TaskTimeSheet } from "./TaskTimeSheet";
 import type { Task } from "@/lib/types";
 import { Icon } from "./Icon";
 import { ModulePeek } from "./ModulePeek";
@@ -22,8 +23,10 @@ export function useTaskTitle(task: Task) {
 
 export function TaskRow({ task, tag, actions }: TaskRowProps) {
   const [open, setOpen] = useState(false);
+  const [timing, setTiming] = useState(false);
   const title = useTaskTitle(task);
   const onHold = Boolean(task.onHold) && !task.done;
+  const canTime = !task.done && !onHold;
 
   return (
     <div
@@ -39,6 +42,12 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
             <span className="tag hold-tag">
               <Icon name="pause" small />
               On hold
+            </span>
+          )}
+          {task.remindTime && canTime && (
+            <span className="tag time-tag">
+              <Icon name="bell" small />
+              {task.remindTime}
             </span>
           )}
           {task.mustDo && !task.done && !onHold && (
@@ -57,6 +66,16 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
         </span>
       </label>
       {task.moduleId && <PeekButton title={title} open={open} onToggle={() => setOpen(!open)} />}
+      {canTime && (
+        <button
+          className={task.remindTime ? "row-btn time-btn on" : "row-btn time-btn"}
+          type="button"
+          aria-label={task.remindTime ? `Change the time for ${title}` : `Set a time for ${title}`}
+          onClick={() => setTiming(true)}
+        >
+          <Icon name="bell" />
+        </button>
+      )}
       {!task.done && (
         <button
           className={onHold ? "row-btn hold-btn on" : "row-btn hold-btn"}
@@ -84,6 +103,7 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
         <Icon name="x" />
       </button>
       {task.moduleId && open && <ModulePeek moduleId={task.moduleId} />}
+      {timing && <TaskTimeSheet task={task} title={title} onClose={() => setTiming(false)} />}
     </div>
   );
 }

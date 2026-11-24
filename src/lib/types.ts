@@ -79,6 +79,8 @@ export type Task = {
   mustDo?: boolean;
   /** Paused: kept on its day but not counted as to do. Never true together with done. */
   onHold?: boolean;
+  /** A time on the task's day, as HH:MM, when the phone gets a notification. Moves with the task. */
+  remindTime?: string;
 };
 
 export type BudgetCategory = {
