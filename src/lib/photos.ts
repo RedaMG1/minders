@@ -1,6 +1,6 @@
 import { currentUserId, newId } from "./store";
 import { getSupabase } from "./sync";
-import type { NotePhoto } from "./types";
+import type { Note, NotePhoto } from "./types";
 
 const BUCKET = "note-photos";
 /** Photos are scaled so the long side is at most this many pixels. */
@@ -108,6 +108,15 @@ export async function removePhotoFiles(paths: string[]): Promise<void> {
 export function visiblePhotos(photos: NotePhoto[], noteId: string): NotePhoto[] {
   const me = currentUserId() ?? "";
   return photos.filter((photo) => photo.noteId === noteId && photo.ownerId === me);
+}
+
+/** A module's photos that this account may see, from all its notes, newest first. */
+export function modulePhotos(photos: NotePhoto[], notes: Note[], moduleId: string): NotePhoto[] {
+  const inModule = new Set(notes.filter((note) => note.moduleId === moduleId).map((note) => note.id));
+  const me = currentUserId() ?? "";
+  return photos
+    .filter((photo) => inModule.has(photo.noteId) && photo.ownerId === me)
+    .sort((a, b) => b.addedAt.localeCompare(a.addedAt));
 }
 
 /** Forgets every photo kept on this device, such as when someone signs out of a shared phone. */

@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Icon, ModuleIcon } from "@/components/Icon";
+import { PhotoCarousel } from "@/components/PhotoCarousel";
+import { PhotoViewer } from "@/components/PhotoViewer";
 import { ModuleSheet } from "@/components/ModuleSheet";
 import { ReminderRowButton } from "@/components/ReminderRowButton";
 import { ReminderSheet } from "@/components/ReminderSheet";
 import { TabBar } from "@/components/TabBar";
+import { modulePhotos } from "@/lib/photos";
 import { addDays, relativeDay, shortDate } from "@/lib/dates";
 import { newId, upcomingReminders, useApp } from "@/lib/store";
 import type { AppState, Module } from "@/lib/types";
@@ -20,6 +23,21 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "lists", label: "Lists" },
   { value: "week", label: "This week" },
 ];
+
+/** The module's photos, big, with arrows; full screen stays inside this module. */
+function ModulePhotos({ module, state }: { module: Module; state: AppState }) {
+  const [viewing, setViewing] = useState<number | null>(null);
+  const photos = modulePhotos(state.photos, state.notes, module.id);
+  if (!photos.length) return null;
+  const noteNames = new Map(state.notes.map((note) => [note.id, note.title.trim() || "Untitled note"]));
+  return (
+    <section className="module-photos" aria-label="Photos">
+      <p className="section-label">Photos</p>
+      <PhotoCarousel photos={photos} noteNames={noteNames} onOpen={setViewing} />
+      {viewing !== null && <PhotoViewer photos={photos} start={viewing} onClose={() => setViewing(null)} />}
+    </section>
+  );
+}
 
 function NotesContent({ module, state, now }: { module: Module; state: AppState; now: Date }) {
   const router = useRouter();
@@ -72,6 +90,7 @@ function NotesContent({ module, state, now }: { module: Module; state: AppState;
         ))}
       </div>
       <div className="scroll">
+        <ModulePhotos module={module} state={state} />
         {notes.length === 0 ? (
           <div className="notes-empty">
             <p className="empty">
