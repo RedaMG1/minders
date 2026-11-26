@@ -708,7 +708,8 @@ select.text-field { appearance: auto; }
 .carousel-note { min-width: 0; overflow: hidden; color: var(--accent-deep); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
 .photo-count { flex: none; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .photo-adding { color: var(--ink-soft); font-size: 14px; }
-.photo-viewer { touch-action: pan-y; user-select: none; }
+/* Pinch-zoom stays on, so a photo can be looked at closely. */
+.photo-viewer { touch-action: pan-y pinch-zoom; user-select: none; }
 .photo-viewer .carousel-arrow { background: rgba(255, 255, 255, 0.16); }
 .viewer-count { position: absolute; bottom: max(var(--safe-bottom, 0px), 20px); left: 50%; translate: -50% 0; color: #fff; }
 

@@ -26,22 +26,32 @@ export function usePhotoUrl(photo: NotePhoto | undefined) {
   return { src: mine?.src ?? null, failed: Boolean(mine?.failed) };
 }
 
-/** Steps through photos with arrows, swipes and the keyboard, wrapping at the ends. */
-export function usePhotoSteps(total: number, start = 0) {
-  const [index, setIndex] = useState(start);
-  // A photo removed from the end leaves the index pointing at the last one still there.
-  const shown = total ? Math.min(index, total - 1) : 0;
-  const step = (by: number) => setIndex(total ? (shown + by + total) % total : 0);
+/**
+ * Steps through photos with arrows, swipes and the keyboard, wrapping at the ends. It follows the photo
+ * shown by its id, so photos arriving or leaving elsewhere in the list never change what's on screen.
+ * If the shown photo itself is removed, its neighbour at the same place takes over.
+ */
+export function usePhotoSteps(ids: string[], start = 0) {
+  const [at, setAt] = useState({ id: ids[start], index: start });
+  const found = at.id ? ids.indexOf(at.id) : -1;
+  const shown = found !== -1 ? found : ids.length ? Math.min(at.index, ids.length - 1) : 0;
+  const step = (by: number) => {
+    if (!ids.length) return;
+    const next = (shown + by + ids.length) % ids.length;
+    setAt({ id: ids[next], index: next });
+  };
   const swipeStart = useRef<number | null>(null);
   const lastSwipe = useRef(0);
   const swipe = {
     onPointerDown: (event: PointerEvent) => {
-      swipeStart.current = event.clientX;
+      // Two fingers, or a zoomed-in view, mean pinching or panning, not swiping.
+      swipeStart.current = event.isPrimary ? event.clientX : null;
     },
     onPointerUp: (event: PointerEvent) => {
       if (swipeStart.current === null) return;
       const moved = event.clientX - swipeStart.current;
       swipeStart.current = null;
+      if ((window.visualViewport?.scale ?? 1) > 1) return;
       if (Math.abs(moved) <= SWIPE_PIXELS) return;
       lastSwipe.current = Date.now();
       step(moved < 0 ? 1 : -1);
@@ -62,7 +72,7 @@ type PhotoCarouselProps = {
 
 /** One big photo at a time, with arrows, swiping and an "n / total" counter. */
 export function PhotoCarousel({ photos, noteNames, onOpen, onRemove }: PhotoCarouselProps) {
-  const { index, step, swipe, justSwiped } = usePhotoSteps(photos.length);
+  const { index, step, swipe, justSwiped } = usePhotoSteps(photos.map((item) => item.id));
   const photo = photos[index];
   const { src, failed } = usePhotoUrl(photo);
   if (!photo) return null;
@@ -70,7 +80,7 @@ export function PhotoCarousel({ photos, noteNames, onOpen, onRemove }: PhotoCaro
 
   return (
     <div className="carousel">
-      <div className="carousel-frame" {...swipe}>
+      <div className="carousel-frame" data-photo-id={photo.id} {...swipe}>
         {src ? (
           <button className="carousel-open" type="button" aria-label="Open photo full screen" onClick={() => !justSwiped() && onOpen(index)}>
             {/* eslint-disable-next-line @next/next/no-img-element -- a private photo from this device, not a page image */}

@@ -7,7 +7,7 @@ import { usePhotoSteps, usePhotoUrl } from "./PhotoCarousel";
 
 /** Photos shown full screen, one at a time. Arrows, swipes and ←/→ move; the button or Escape closes. */
 export function PhotoViewer({ photos, start, onClose }: { photos: NotePhoto[]; start: number; onClose: () => void }) {
-  const { index, step, swipe } = usePhotoSteps(photos.length, start);
+  const { index, step, swipe } = usePhotoSteps(photos.map((photo) => photo.id), start);
   const { src } = usePhotoUrl(photos[index]);
   const many = photos.length > 1;
 
@@ -24,7 +24,7 @@ export function PhotoViewer({ photos, start, onClose }: { photos: NotePhoto[]; s
   if (!photos.length) return null;
 
   return (
-    <div className="photo-viewer" role="dialog" aria-modal="true" aria-label="Photo" {...swipe}>
+    <div className="photo-viewer" role="dialog" aria-modal="true" aria-label="Photo" data-photo-id={photos[index]?.id} {...swipe}>
       {/* eslint-disable-next-line @next/next/no-img-element -- a private photo from this device, not a page image */}
       {src && <img src={src} alt="" draggable={false} />}
       {many && (

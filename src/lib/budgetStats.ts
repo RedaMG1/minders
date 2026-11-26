@@ -37,10 +37,14 @@ export function budgetStats(categories: BudgetCategory[], items: BudgetItem[], m
   const change = previousTotal ? Math.round(((total - previousTotal) / previousTotal) * 100) : null;
 
   // The current month is averaged over the days so far; other months over all their days.
+  // Items dated later this month, like a bill entered ahead, count once as they are, never multiplied.
   const isCurrent = month === monthKey(today);
   const days = isCurrent ? today.getDate() : daysInMonth(month);
-  const dailyAverage = Math.round(total / days);
-  const projected = isCurrent ? Math.round((total / days) * daysInMonth(month)) : null;
+  const todayKey = `${month}-${String(today.getDate()).padStart(2, "0")}`;
+  const later = isCurrent ? sumAmounts(inMonth.filter((item) => item.date > todayKey)) : 0;
+  const soFar = total - later;
+  const dailyAverage = Math.round(soFar / days);
+  const projected = isCurrent ? Math.round((soFar / days) * daysInMonth(month)) + later : null;
 
   // A subcategory whose category is gone stands on its own, as on the Budget page.
   const ids = new Set(categories.map((category) => category.id));
