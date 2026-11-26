@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { BudgetCategorySheet } from "@/components/BudgetCategorySheet";
+import { BudgetStats } from "@/components/BudgetStats";
 import { Icon } from "@/components/Icon";
 import { MonthSwitcher } from "@/components/MonthSwitcher";
 import { TabBar } from "@/components/TabBar";
@@ -62,6 +63,8 @@ export function BudgetView() {
             Make one for each kind of spending, like Food, Car or Rent, then add what you spend to it.
           </p>
         )}
+
+        <BudgetStats categories={state.budgetCategories} items={state.budgetItems} month={month} today={now} />
 
         <div className="budget-list">
           {categories.map((category) => {

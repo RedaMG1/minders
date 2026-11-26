@@ -711,3 +711,29 @@ select.text-field { appearance: auto; }
 .photo-viewer { touch-action: pan-y; user-select: none; }
 .photo-viewer .carousel-arrow { background: rgba(255, 255, 255, 0.16); }
 .viewer-count { position: absolute; bottom: max(var(--safe-bottom, 0px), 20px); left: 50%; translate: -50% 0; color: #fff; }
+
+/* Budget stats */
+.budget-stats { display: grid; gap: 12px; margin: 14px 0 18px; }
+.stats-head { display: grid; gap: 2px; }
+.stats-head strong { font-family: var(--display); font-size: 26px; font-weight: var(--title-weight); font-variant-numeric: tabular-nums; }
+.stats-head span { font-size: 15px; font-weight: 600; }
+.stats-head small { color: var(--ink-soft); font-size: 13.5px; }
+.stats-head small.over { color: var(--ember); font-weight: 600; }
+.stats-bars { display: grid; gap: 10px; }
+.stats-bar { display: grid; gap: 4px; color: var(--ink); text-decoration: none; }
+.stats-bar-top { display: flex; justify-content: space-between; gap: 10px; font-size: 14.5px; }
+.stats-bar-top b { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.stats-bar-top span { flex: none; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.stats-track { display: block; height: 8px; overflow: hidden; border-radius: 4px; background: var(--line); }
+.stats-track i { display: block; height: 100%; border-radius: 4px; background: var(--deep, var(--accent-deep)); }
+.stats-chart { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; align-items: end; height: 96px; }
+.stats-month { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; height: 100%; color: var(--ink-soft); font-size: 12px; }
+.stats-month i { display: block; width: 100%; max-width: 28px; min-height: 2px; border-radius: 6px 6px 2px 2px; background: color-mix(in srgb, var(--accent-deep) 35%, transparent); }
+.stats-month.current { color: var(--ink); font-weight: 700; }
+.stats-month.current i { background: var(--accent-deep); }
+.stats-biggest { display: grid; gap: 6px; font-size: 14.5px; }
+.stats-biggest ol { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.stats-biggest li { display: flex; justify-content: space-between; gap: 10px; }
+.stats-biggest li span { display: grid; min-width: 0; overflow-wrap: anywhere; }
+.stats-biggest li small { color: var(--ink-soft); font-size: 12.5px; }
+.stats-biggest li b { flex: none; font-variant-numeric: tabular-nums; }
