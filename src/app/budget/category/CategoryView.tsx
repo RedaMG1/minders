@@ -10,6 +10,7 @@ import { MonthSwitcher } from "@/components/MonthSwitcher";
 import { TabBar } from "@/components/TabBar";
 import { dayKey, shortDate } from "@/lib/dates";
 import { formatMoney, isMonthKey, monthKey } from "@/lib/money";
+import { savingsIds } from "@/lib/savings";
 import { budgetItemsInMonth, categoryFamily, sumAmounts, useApp } from "@/lib/store";
 import type { AppState, BudgetCategory } from "@/lib/types";
 
@@ -23,6 +24,7 @@ function CategoryScreen({ category, state, now, month }: { category: BudgetCateg
   const [addingSub, setAddingSub] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
+  const isSavings = savingsIds(state.budgetCategories).has(category.id);
   const parent = category.parentId ? state.budgetCategories.find((item) => item.id === category.parentId) : undefined;
   // Only a top-level category holds subcategories.
   const subcategories = parent
@@ -67,7 +69,7 @@ function CategoryScreen({ category, state, now, month }: { category: BudgetCateg
               <h1 className="day-title">{category.name}</h1>
               <span className="kind">
                 {formatMoney(spent)}
-                {limit ? ` of ${formatMoney(limit)}` : " spent"}
+                {isSavings ? ` saved${limit ? ` of your ${formatMoney(limit)} goal` : ""}` : limit ? ` of ${formatMoney(limit)}` : " spent"}
               </span>
             </div>
           </div>

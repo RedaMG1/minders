@@ -89,6 +89,8 @@ export type BudgetCategory = {
   color: string;
   /** The most you plan to spend in this category each month, in cents. */
   monthlyLimit?: number;
+  /** Money put here is savings, not spending. Set on top-level categories; their subcategories follow. */
+  savings?: boolean;
   /** Set on a subcategory: the category it sits in. Subcategories don't have their own subcategories. */
   parentId?: string;
   createdAt: string;

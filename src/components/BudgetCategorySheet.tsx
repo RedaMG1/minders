@@ -27,6 +27,7 @@ export function BudgetCategorySheet({ category, itemCount = 0, subCount = 0, par
   const [color, setColor] = useState(category?.color ?? parent?.color ?? MODULE_COLORS[0].value);
   const [limit, setLimit] = useState(category?.monthlyLimit ? centsToInput(category.monthlyLimit) : "");
   const [error, setError] = useState("");
+  const [savings, setSavings] = useState(Boolean(category?.savings));
   const [confirming, setConfirming] = useState(false);
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -44,6 +45,7 @@ export function BudgetCategorySheet({ category, itemCount = 0, subCount = 0, par
       color,
       monthlyLimit,
       ...(parentId ? { parentId } : {}),
+      ...(!parentId && savings ? { savings: true } : {}),
       createdAt: category?.createdAt ?? new Date().toISOString(),
     });
     onClose();
@@ -88,6 +90,16 @@ export function BudgetCategorySheet({ category, itemCount = 0, subCount = 0, par
           <span aria-hidden="true">€</span>
         </span>
       </label>
+
+      {!parentId && (
+        <label className="setting share-setting">
+          <span>
+            <b>This is savings</b>
+            <small>Money here is kept apart: it never counts as spent, in your plan or in the stats.</small>
+          </span>
+          <input className="switch" type="checkbox" id="category-savings" checked={savings} onChange={(event) => setSavings(event.target.checked)} />
+        </label>
+      )}
 
       <fieldset className="field">
         <legend>Color</legend>
