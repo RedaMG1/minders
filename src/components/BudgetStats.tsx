@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { budgetStats } from "@/lib/budgetStats";
 import { formatMoney } from "@/lib/money";
 import type { BudgetCategory, BudgetItem } from "@/lib/types";
@@ -10,19 +13,44 @@ const monthName = (month: string, style: "long" | "short") => {
 
 const percent = (share: number) => `${Math.round(share * 100)}%`;
 
+/** Whether the stats are hidden is remembered on this device only. */
+const HIDDEN_KEY = "minders-stats-hidden";
+const readHidden = () => {
+  try {
+    return localStorage.getItem(HIDDEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
 type BudgetStatsProps = { categories: BudgetCategory[]; items: BudgetItem[]; month: string; today: Date };
 
 /** A small dashboard of the month: totals, pace, where it went, the last six months and the biggest items. */
 export function BudgetStats({ categories, items, month, today }: BudgetStatsProps) {
+  const [hidden, setHidden] = useState(readHidden);
   const stats = budgetStats(categories, items, month, today);
+
+  function toggle() {
+    const next = !hidden;
+    setHidden(next);
+    try {
+      if (next) localStorage.setItem(HIDDEN_KEY, "1");
+      else localStorage.removeItem(HIDDEN_KEY);
+    } catch {}
+  }
   const previous = monthName(stats.months[stats.months.length - 2].month, "long");
   const names = new Map(categories.map((category) => [category.id, category.name]));
   const tallest = Math.max(...stats.months.map((item) => item.total), 1);
 
   return (
     <section className="budget-stats" aria-label="Stats">
-      <p className="section-label">Stats</p>
-      {stats.total === 0 ? (
+      <div className="stats-title">
+        <p className="section-label">Stats</p>
+        <button className="stats-toggle" type="button" aria-label={hidden ? "Show stats" : "Hide stats"} aria-expanded={!hidden} onClick={toggle}>
+          {hidden ? "Show" : "Hide"}
+        </button>
+      </div>
+      {hidden ? null : stats.total === 0 ? (
         <p className="empty stats-empty">Nothing spent in {monthName(month, "long")}.</p>
       ) : (
         <>

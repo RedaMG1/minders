@@ -744,3 +744,5 @@ select.text-field { appearance: auto; }
 .budget-savings span { font-size: 14px; font-weight: 600; }
 .budget-savings strong { font-family: var(--display); font-size: 26px; font-weight: var(--title-weight); font-variant-numeric: tabular-nums; }
 .savings-list { margin-bottom: 18px; }
+.stats-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stats-toggle { min-height: 32px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 16px; background: none; color: var(--ink-soft); font-size: 13px; font-weight: 600; }
