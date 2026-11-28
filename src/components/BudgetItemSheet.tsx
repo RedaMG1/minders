@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Sheet } from "./Sheet";
 import { centsToInput, parseAmount } from "@/lib/money";
-import { deleteBudgetItem, newId, saveBudgetItem } from "@/lib/store";
+import { copyBudgetItemToNextMonth, deleteBudgetItem, newId, saveBudgetItem, showMessage } from "@/lib/store";
 import type { BudgetCategory, BudgetItem } from "@/lib/types";
 
 type BudgetItemSheetProps = {
@@ -126,6 +126,23 @@ export function BudgetItemSheet({ categoryId, categoryName, parentId, subcategor
       <button className="primary" type="submit" disabled={!amount.trim()}>
         {item ? "Save changes" : "Add item"}
       </button>
+      {item && (
+        <button
+          className="ghost"
+          type="button"
+          onClick={() => {
+            const copy = copyBudgetItemToNextMonth(item.id);
+            if (copy) {
+              const [year, month] = copy.date.split("-").map(Number);
+              const name = new Date(year, month - 1, 1).toLocaleDateString("en-GB", { month: "long" });
+              showMessage(`Copied to ${name}`, copy.label);
+            }
+            onClose();
+          }}
+        >
+          Copy to next month
+        </button>
+      )}
       {item && (
         <button className="danger" type="button" onClick={remove}>
           Delete item

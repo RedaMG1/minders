@@ -520,6 +520,22 @@ export function saveBudgetItem(item: BudgetItem) {
   }));
 }
 
+/**
+ * Copies an item to the same day next month, in the same category. A day the next month doesn't have,
+ * like the 31st, becomes its last day. Returns the copy.
+ */
+export function copyBudgetItemToNextMonth(id: string): BudgetItem | null {
+  const original = getState().budgetItems.find((item) => item.id === id);
+  if (!original) return null;
+  const [year, month, day] = original.date.split("-").map(Number);
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const next = new Date(year, month, Math.min(day, lastDay));
+  const date = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
+  const copy: BudgetItem = { ...original, id: newId(), date, createdAt: new Date().toISOString() };
+  commit((data) => ({ ...data, budgetItems: [...data.budgetItems, copy] }));
+  return copy;
+}
+
 export function deleteBudgetItem(id: string) {
   commit((data) => ({ ...data, budgetItems: data.budgetItems.filter((item) => item.id !== id) }));
 }
