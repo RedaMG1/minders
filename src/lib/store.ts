@@ -437,6 +437,13 @@ export function setTaskTime(id: string, time: string | null) {
   tick();
 }
 
+/** Renames a task. An empty name is ignored. */
+export function setTaskTitle(id: string, title: string) {
+  const trimmed = title.trim();
+  if (!trimmed) return;
+  changeTask(id, (task) => ({ ...task, title: trimmed }));
+}
+
 /** Puts a task on hold, which clears must do and first thing, or puts it back to do. */
 export function toggleOnHold(id: string) {
   changeTask(id, (task) => (task.onHold ? { ...task, onHold: false } : { ...task, onHold: true, mustDo: false, first: false }));

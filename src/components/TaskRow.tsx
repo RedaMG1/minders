@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { deleteTask, toggleMustDo, toggleOnHold, toggleTask, useApp } from "@/lib/store";
+import { TaskEditSheet } from "./TaskEditSheet";
 import { TaskTimeSheet } from "./TaskTimeSheet";
 import type { Task } from "@/lib/types";
 import { Icon } from "./Icon";
@@ -24,6 +25,7 @@ export function useTaskTitle(task: Task) {
 export function TaskRow({ task, tag, actions }: TaskRowProps) {
   const [open, setOpen] = useState(false);
   const [timing, setTiming] = useState(false);
+  const [editing, setEditing] = useState(false);
   const title = useTaskTitle(task);
   const onHold = Boolean(task.onHold) && !task.done;
   const canTime = !task.done && !onHold;
@@ -34,10 +36,24 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
         .filter(Boolean)
         .join(" ")}
     >
-      <label className="task">
-        <input type="checkbox" id={`task-${task.id}`} checked={task.done} onChange={() => toggleTask(task.id)} />
+      <div className="task">
+        <input
+          type="checkbox"
+          id={`task-${task.id}`}
+          aria-label={`Mark ${title} done`}
+          checked={task.done}
+          onChange={() => toggleTask(task.id)}
+        />
         <span className="task-body">
-          <span className="task-text">{title}</span>
+          {/* Tapping the name edits it; a module task keeps its module's name, so it shows the module instead. */}
+          <button
+            className="task-text task-name"
+            type="button"
+            aria-label={task.moduleId ? undefined : `Edit ${title}`}
+            onClick={() => (task.moduleId ? setOpen(!open) : setEditing(true))}
+          >
+            {title}
+          </button>
           {onHold && (
             <span className="tag hold-tag">
               <Icon name="pause" small />
@@ -64,7 +80,7 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
           )}
           {tag && <span className="tag carried">{tag}</span>}
         </span>
-      </label>
+      </div>
       {/* The buttons stay together, and move under the task as a group when the row is short of room. */}
       <span className="task-actions">
         {task.moduleId && <PeekButton title={title} open={open} onToggle={() => setOpen(!open)} />}
@@ -107,6 +123,7 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
       </span>
       {task.moduleId && open && <ModulePeek moduleId={task.moduleId} />}
       {timing && <TaskTimeSheet task={task} title={title} onClose={() => setTiming(false)} />}
+      {editing && <TaskEditSheet task={task} onClose={() => setEditing(false)} />}
     </div>
   );
 }

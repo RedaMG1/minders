@@ -746,3 +746,7 @@ select.text-field { appearance: auto; }
 .savings-list { margin-bottom: 18px; }
 .stats-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .stats-toggle { min-height: 32px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 16px; background: none; color: var(--ink-soft); font-size: 13px; font-weight: 600; }
+
+/* A task's name is a button that opens Edit task */
+.task-name { padding: 0; border: 0; background: none; color: inherit; font-family: inherit; line-height: inherit; text-align: left; cursor: pointer; }
+.task input:checked + .task-body .task-name { color: var(--fg-soft); text-decoration: line-through; }
