@@ -27,4 +27,9 @@ Date: 2026-11-28. Size: a small change. Approved in conversation ("yes do it and
 - **Ticking:** ticking done is on the circle only.
 - **Module tasks:** they keep their module's name, so tapping the name opens the module's contents instead, the same as the list button.
 
+## 4. Copy a budget item to next month (added mid-build)
+
+- **Where:** an item's edit sheet has **Copy to next month**. It makes a copy with the same category, label and amount, dated the same day of the following month. A day that month doesn't have (like the 31st) becomes its last day.
+- **Afterwards:** the original stays where it was, and a message confirms the copy.
+
 **Left to the builder:** exact looks, in the app's current style.

@@ -109,7 +109,26 @@
 - [ ] **Step 4: Run** taskedit, tasktime, onhold and moduletask, tsc and lint. Expected: all PASS.
 - [ ] **Step 5: Commit** "Let a task's name be edited".
 
-### Task 4: Ship
+### Task 4: Copy a budget item to next month (added mid-build)
+
+**Files:**
+- Modify: `src/lib/store.ts`, `src/components/BudgetItemSheet.tsx`
+- Test: `<scratchpad>/copyitem-e2e.mjs`
+
+**Interfaces:**
+- Produces `copyBudgetItemToNextMonth(id: string): BudgetItem | null`. The copy gets a new id, the same category, label and amount, and the date shifted one month, clamped to the month's last day.
+
+- [ ] **Step 1: Write the failing browser test.**
+  - "Copy to next month" on a 15 Nov item creates a 15 Dec item in the same category, with the same label and amount, locally and on the database.
+  - The November item is unchanged.
+  - A 31 Jan item copies to 28 Feb.
+  - A message confirms the copy.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run** the test and features3. Expected: PASS.
+- [ ] **Step 5: Commit** "Copy a budget item to next month".
+
+### Task 5: Ship
 
 - [ ] **Step 1:** Final whole-branch review and its fix pass.
 - [ ] **Step 2:** `npm run build` with the real env. Push `feature/supabase-sync`, fast-forward `main` to it, and push `main`.
