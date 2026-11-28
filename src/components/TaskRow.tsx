@@ -37,13 +37,16 @@ export function TaskRow({ task, tag, actions }: TaskRowProps) {
         .join(" ")}
     >
       <div className="task">
-        <input
-          type="checkbox"
-          id={`task-${task.id}`}
-          aria-label={`Mark ${title} done`}
-          checked={task.done}
-          onChange={() => toggleTask(task.id)}
-        />
+        {/* The tap area around the circle is a full finger wide. */}
+        <label className="task-check">
+          <input
+            type="checkbox"
+            id={`task-${task.id}`}
+            aria-label={`Mark ${title} done`}
+            checked={task.done}
+            onChange={() => toggleTask(task.id)}
+          />
+        </label>
         <span className="task-body">
           {/* Tapping the name edits it; a module task keeps its module's name, so it shows the module instead. */}
           <button

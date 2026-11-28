@@ -27,26 +27,32 @@ export function BudgetItemSheet({ categoryId, categoryName, parentId, subcategor
   const [date, setDate] = useState(item?.date ?? defaultDate);
   const [error, setError] = useState("");
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  /** Saves what's in the sheet. Returns the saved item's id, or null when something needs fixing first. */
+  function save(): string | null {
     const cents = parseAmount(amount);
     if (cents === null) {
       setError("Enter the amount as a number, like 12 or 12,50.");
-      return;
+      return null;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       setError("Choose a date.");
-      return;
+      return null;
     }
+    const id = item?.id ?? newId();
     saveBudgetItem({
-      id: item?.id ?? newId(),
+      id,
       categoryId: placeId,
       label: label.trim() || subcategories.find((sub) => sub.id === placeId)?.name || categoryName,
       amount: cents,
       date,
       createdAt: item?.createdAt ?? new Date().toISOString(),
     });
-    onClose();
+    return id;
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (save()) onClose();
   }
 
   function remove() {
@@ -131,7 +137,10 @@ export function BudgetItemSheet({ categoryId, categoryName, parentId, subcategor
           className="ghost"
           type="button"
           onClick={() => {
-            const copy = copyBudgetItemToNextMonth(item.id);
+            // Anything changed in the sheet is saved first, so the copy matches what's on screen.
+            const savedId = save();
+            if (!savedId) return;
+            const copy = copyBudgetItemToNextMonth(savedId);
             if (copy) {
               const [year, month] = copy.date.split("-").map(Number);
               const name = new Date(year, month - 1, 1).toLocaleDateString("en-GB", { month: "long" });

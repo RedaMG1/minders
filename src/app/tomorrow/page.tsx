@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { ModulePeek } from "@/components/ModulePeek";
 import { ModulePickerSheet } from "@/components/ModulePickerSheet";
 import { QuickAdd } from "@/components/QuickAdd";
+import { TaskEditSheet } from "@/components/TaskEditSheet";
 import { TabBar } from "@/components/TabBar";
 import { PeekButton, TaskRow, useTaskTitle } from "@/components/TaskRow";
 import { addDays, dayKey, dayMonthLong, weekdayLong } from "@/lib/dates";
@@ -13,17 +14,28 @@ import type { Task } from "@/lib/types";
 
 function FirstThing({ task }: { task: Task }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const title = useTaskTitle(task);
   return (
     <div className="first-wrap">
       <div className="first-thing">
-        <label className="first-label">
-          <input type="checkbox" id={`task-${task.id}`} checked={task.done} onChange={() => toggleTask(task.id)} />
+        <div className="first-label">
+          <label className="task-check">
+            <input type="checkbox" id={`task-${task.id}`} aria-label={`Mark ${title} done`} checked={task.done} onChange={() => toggleTask(task.id)} />
+          </label>
           <span>
             <span className="label">First thing</span>
-            <strong>{title}</strong>
+            {/* Like other tasks, the name edits it; a module task shows its module instead. */}
+            <button
+              className="task-name first-name"
+              type="button"
+              aria-label={task.moduleId ? undefined : `Edit ${title}`}
+              onClick={() => (task.moduleId ? setOpen(!open) : setEditing(true))}
+            >
+              <strong>{title}</strong>
+            </button>
           </span>
-        </label>
+        </div>
         {task.moduleId && <PeekButton title={title} open={open} onToggle={() => setOpen(!open)} />}
         <button
           className="row-btn"
@@ -35,6 +47,7 @@ function FirstThing({ task }: { task: Task }) {
         </button>
       </div>
       {task.moduleId && open && <ModulePeek moduleId={task.moduleId} />}
+      {editing && <TaskEditSheet task={task} onClose={() => setEditing(false)} />}
     </div>
   );
 }

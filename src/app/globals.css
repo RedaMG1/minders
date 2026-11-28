@@ -306,7 +306,7 @@ button { cursor: pointer; }
 .task input:checked, .night .task input:checked { border-color: var(--accent-deep); background-color: var(--accent-deep); background-image: var(--check); }
 .task-body { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
 .task-text { min-width: 0; overflow-wrap: anywhere; font-size: 16px; font-weight: 500; }
-.task input:checked + .task-body .task-text { color: var(--fg-soft); text-decoration: line-through; }
+.task:has(input:checked) .task-text { color: var(--fg-soft); text-decoration: line-through; }
 .row-btn { display: grid; place-items: center; width: 40px; height: 44px; flex: none; padding: 0; border: 0; background: none; color: var(--fg-soft); }
 .row-btn.on { color: var(--accent-deep); }
 .later-btn { display: inline-flex; align-items: center; gap: 4px; flex: none; min-height: 32px; padding-inline: 10px 8px; border: 1px solid var(--rule); border-radius: 16px; background: none; color: var(--fg-soft); font-size: 13px; font-weight: 600; }
@@ -340,7 +340,7 @@ button { cursor: pointer; }
 .first-thing strong { display: block; overflow-wrap: anywhere; font-family: var(--display); font-size: 21px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
 .first-thing input { appearance: none; width: 28px; height: 28px; flex: none; margin: 0; border: 2px solid var(--ink); border-radius: 50%; cursor: pointer; }
 .first-thing input:checked { background: var(--ink); box-shadow: inset 0 0 0 5px var(--sun); }
-.first-thing input:checked + span strong { text-decoration: line-through; }
+.first-thing:has(input:checked) strong { text-decoration: line-through; }
 .first-thing .row-btn { color: inherit; }
 .first-label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .first-empty { padding: 14px 16px; border: 1.5px dashed var(--night-line); border-radius: 20px; color: var(--fg-soft); }
@@ -749,4 +749,7 @@ select.text-field { appearance: auto; }
 
 /* A task's name is a button that opens Edit task */
 .task-name { padding: 0; border: 0; background: none; color: inherit; font-family: inherit; line-height: inherit; text-align: left; cursor: pointer; }
-.task input:checked + .task-body .task-name { color: var(--fg-soft); text-decoration: line-through; }
+/* A finger-sized tap area around the circle, without moving it. */
+.task-check { display: grid; place-items: center; flex: none; margin: -9px; padding: 9px; cursor: pointer; }
+.task-row > .task { cursor: default; }
+.first-name { display: block; }
